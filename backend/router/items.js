@@ -24,8 +24,6 @@ router.get('/api/items', async (req, res) => {
     }
     
     const items = await Item.find(filter)
-      .populate('user', 'firstName lastName avatar')
-      .sort({ createdAt: -1 });
       
     res.status(200).json({
       success: true,
