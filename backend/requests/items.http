@@ -1,0 +1,57 @@
+### Get all items
+GET http://localhost:5000/api/items
+
+### Get only lost items
+GET http://localhost:5000/api/items?type=lost
+
+### Get items by category
+GET http://localhost:5000/api/items?category=electronics
+
+### Search items
+GET http://localhost:5000/api/items?search=phone
+
+### Get a single item by ID
+GET http://localhost:5000/api/items/64f5a53d9f83621c26506030
+
+### Create a new lost item
+POST http://localhost:5000/api/items
+Content-Type: application/json
+
+{
+  "type": "lost",
+  "title": "Lost iPhone 14 Pro",
+  "description": "Lost my black iPhone 14 Pro near Central Park. It has a blue case with my initials on it.",
+  "category": "electronics",
+  "location": {
+    "address": "Central Park West",
+    "city": "New York",
+    "state": "NY",
+    "coordinate": {
+      "lat": 40.7812,
+      "lng": -73.9665
+    }
+  },
+  "images": ["https://example.com/placeholder-image.jpg"],
+  "user": "64f5a53d9f83621c26506028"
+}
+
+### Create a new found item
+POST http://localhost:5000/api/items
+Content-Type: application/json
+
+{
+  "type": "found",
+  "title": "Found gold ring",
+  "description": "Found a gold wedding band at Lincoln Memorial. Has an inscription inside.",
+  "category": "jewelry",
+  "location": {
+    "address": "Lincoln Memorial",
+    "city": "Washington",
+    "state": "DC",
+    "coordinate": {
+      "lat": 38.8893,
+      "lng": -77.0502
+    }
+  },
+  "user": "64f5a53d9f83621c26506028"
+}

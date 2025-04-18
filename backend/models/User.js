@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import e from "express";
 
 const userSchema = new mongoose.Schema({
     firstName: {
@@ -11,7 +10,7 @@ const userSchema = new mongoose.Schema({
     lastName: {
         type: String,
         required: [true, 'Please provide a name'],
-        trim: true
+        trim: true // trim è un metodo di mongoose che rimuove gli spazi bianchi all'inizio e alla fine della stringa
     },
     email: {
         type: String,
@@ -36,7 +35,11 @@ const userSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: [true, 'Pleasse provide a phone number']
+        required: [true, 'Please provide a phone number'],
+        match: [
+            /^\+?[0-9]{1,4}?[-.\s]?(\()?[0-9]{1,3}(\))?[-.\s]?[0-9]{1,4}[-.\s]?[0-9]{1,4}[-.\s]?[0-9]{1,9}$/,
+            'Please provide a valid phone number'
+        ]
     },
     googleId: {
         type: String,

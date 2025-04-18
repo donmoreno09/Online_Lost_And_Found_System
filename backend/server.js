@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import userRouter from './router/users.js';
+import itemRouter from './router/items.js';  // Import the new router
 import connectDB from './config/db.js';
 
 const server = express();
@@ -15,8 +16,8 @@ server.use(cors()); // serve per permettere le richieste cross-origin
 server.use(express.json()); // serve per parsare il body delle richieste in json
 
 server.use(userRouter);
+server.use(itemRouter);  // Use the new router
 
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-}
-);
+});
