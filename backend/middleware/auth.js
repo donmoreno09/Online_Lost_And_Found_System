@@ -3,35 +3,55 @@ import User from '../models/User.js';
 
 const auth = async (req, res, next) => {
   try {
-    // Check if Authorization header exists and is Bearer type
-    if (!req.headers.authorization) return res.status(401).json({ message: 'Authentication required' });
+    // Verifica se c'è l'header Authorization e se è di tipo Bearer
+    if (!req.headers.authorization) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Autenticazione richiesta' 
+      });
+    }
     
     const parts = req.headers.authorization.split(' ');
-    if (parts.length !== 2) return res.status(401).json({ message: 'Invalid token format' });
-    if (parts[0] !== 'Bearer') return res.status(401).json({ message: 'Invalid token format' });
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Formato token non valido' 
+      });
+    }
     
     const token = parts[1];
     
-    // Verify token signature
+    // Verifica la firma del token
     jwt.verify(token, process.env.JWT_SECRET, async (err, payload) => {
-      // Error: token might have been tampered with
-      if (err) return res.status(401).json({ message: 'Invalid token' });
+      if (err) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Token non valido' 
+        });
+      }
       
-      // Get user data from database
-      const user = await User.findById(payload.id).select('-password');
+      // Recupera i dati dell'utente dal database
+      const user = await User.findById(payload.userId).select('-password');
       
-      // User might have deleted account
-      if (!user) return res.status(401).json({ message: 'User not found' });
+      if (!user) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Utente non trovato' 
+        });
+      }
       
-      // Add user to request for subsequent middleware
+      // Aggiungiamo l'utente alla request per i middleware successivi
       req.user = user;
       
-      // Proceed to next middleware
+      // Passa al prossimo middleware
       next();
     });
   } catch (error) {
-    console.error('Authentication error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Errore di autenticazione:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Errore del server' 
+    });
   }
 };
 

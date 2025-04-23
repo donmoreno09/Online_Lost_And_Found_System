@@ -25,7 +25,10 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Please provide a password'],
+        required: function() {
+            // La password è obbligatoria solo se non c'è un googleId
+            return this.googleId === null || this.googleId === undefined;
+        },
         minlength: 6,
         select: false
     },
@@ -35,7 +38,7 @@ const userSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: [true, 'Please provide a phone number'],
+        default: null,
         match: [
             /^\+?[0-9]{1,4}?[-.\s]?(\()?[0-9]{1,3}(\))?[-.\s]?[0-9]{1,4}[-.\s]?[0-9]{1,4}[-.\s]?[0-9]{1,9}$/,
             'Please provide a valid phone number'
@@ -49,25 +52,15 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    role: {
+        type: String,
+        enum: ["User", "Admin"],
+        default: "User",
+    },
     createdAt: {
         type: Date,
         default: Date.now
     },
 }, { timestamps: true });
 
-userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) {
-      next();
-    }
-  
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-});
-
-userSchema.methods.matchPassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
-
-const User = mongoose.model('User', userSchema);
-
-export default User;
+export default mongoose.model("User", userSchema);

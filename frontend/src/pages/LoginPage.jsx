@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Form, Button, Alert, Card } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
-  // State for form data and form submission
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -12,11 +11,9 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Hooks for navigation and authentication
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -25,19 +22,19 @@ const LoginPage = () => {
     });
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
     try {
-      setLoading(true);
+      const result = await login(formData);
       
-      // For demo purposes - in a real app, this would call your API
-      // This is a mock login that creates a user object and token
-      await login(formData);
-      
-      navigate('/'); // Redirect to home page after login
+      if (result.success) {
+        navigate('/'); // Redirect to home page after login
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
       setError('Failed to log in. Please check your credentials.');
       console.error('Login error:', err);
@@ -94,7 +91,7 @@ const LoginPage = () => {
               
               <div className="text-center mt-3">
                 <p className="mb-0">
-                  Don't have an account? <a href="/register">Register here</a>
+                  Don't have an account? <Link to="/register">Register here</Link>
                 </p>
               </div>
             </Card.Body>

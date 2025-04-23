@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Container, Row, Col, Form, Button, Alert, Card } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Form, Button, Alert, Card, Image } from 'react-bootstrap';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage = () => {
-  // State for form data and form submission
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -13,14 +12,14 @@ const RegisterPage = () => {
     confirmPassword: '',
     phone: '',
   });
+  const [avatar, setAvatar] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Hooks for navigation and authentication
   const navigate = useNavigate();
   const { register } = useAuth();
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -29,7 +28,22 @@ const RegisterPage = () => {
     });
   };
 
-  // Handle form submission
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAvatar(file);
+      // Create a preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setAvatar(null);
+      setAvatarPreview(null);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -46,11 +60,18 @@ const RegisterPage = () => {
     try {
       setLoading(true);
       
-      // For demo purposes - in a real app, this would call your API
-      // This is a mock registration
-      await register(formData);
+      const registrationData = {
+        ...formData,
+        avatar: avatar
+      };
       
-      navigate('/login'); // Redirect to login page after registration
+      const result = await register(registrationData);
+      
+      if (result.success) {
+        navigate('/login'); // Redirect to login page after registration
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
       setError('Failed to create an account. Please try again.');
       console.error('Registration error:', err);
@@ -154,6 +175,28 @@ const RegisterPage = () => {
                   </Col>
                 </Row>
                 
+                <Form.Group className="mb-3">
+                  <Form.Label>Profile Picture (optional)</Form.Label>
+                  <Form.Control
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                  />
+                </Form.Group>
+                
+                {/* Avatar preview */}
+                {avatarPreview && (
+                  <div className="text-center mb-3">
+                    <p>Avatar Preview:</p>
+                    <Image 
+                      src={avatarPreview} 
+                      alt="Avatar preview" 
+                      roundedCircle 
+                      style={{ width: '100px', height: '100px', objectFit: 'cover' }} 
+                    />
+                  </div>
+                )}
+                
                 <div className="d-grid mt-4">
                   <Button 
                     type="submit" 
@@ -167,7 +210,7 @@ const RegisterPage = () => {
               
               <div className="text-center mt-3">
                 <p className="mb-0">
-                  Already have an account? <a href="/login">Login here</a>
+                  Already have an account? <Link to="/login">Login here</Link>
                 </p>
               </div>
             </Card.Body>

@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, Badge, Button, Modal } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   const getBadgeVariant = (type) => {
     return type === 'lost' ? 'danger' : 'success';
@@ -21,9 +24,18 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
     ? item.images[0] 
     : 'https://via.placeholder.com/300x200?text=No+Image';
 
-  const handleDelete = () => {
-    setShowModal(false);
-    if (onDelete) onDelete(item._id);
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      await axios.delete(`${API_URL}/items/${item._id}`);
+      setShowModal(false);
+      if (onDelete) onDelete(item._id);
+    } catch (err) {
+      console.error('Error deleting item:', err);
+      // Qui potresti gestire meglio l'errore mostrando un messaggio utente
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -54,12 +66,23 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
             </small>
           </div>
           
+          <div className="d-grid mb-2">
+            <Button 
+              as={Link} 
+              to={`/items/${item._id}`} 
+              variant="outline-primary" 
+              size="sm"
+            >
+              View Details
+            </Button>
+          </div>
+          
           {showActions && (
             <div className="d-flex justify-content-between">
               <Button 
                 as={Link} 
-                to={`/edit-item/${item._id}`} 
-                variant="outline-primary" 
+                to={`/items/edit/${item._id}`} 
+                variant="outline-secondary" 
                 size="sm"
               >
                 Edit
@@ -88,8 +111,12 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={handleDelete}>
-            Delete
+          <Button 
+            variant="danger" 
+            onClick={handleDelete}
+            disabled={loading}
+          >
+            {loading ? 'Deleting...' : 'Delete'}
           </Button>
         </Modal.Footer>
       </Modal>

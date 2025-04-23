@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Form, Button, Card, Alert } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
-const CreateItemPage = () => {
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+const EditItemPage = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { user } = useAuth();
+  
   const [formData, setFormData] = useState({
     type: 'lost',
     title: '',
@@ -12,13 +19,60 @@ const CreateItemPage = () => {
     address: '',
     city: '',
     state: '',
-    date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD
+    date: '',
   });
   
   const [images, setImages] = useState([]);
   const [imagePreview, setImagePreview] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Fetch item data
+  useEffect(() => {
+    const fetchItem = async () => {
+      try {
+        setFetchLoading(true);
+        const response = await axios.get(`${API_URL}/items/${id}`);
+        
+        if (response.data.success) {
+          const item = response.data.data;
+          
+          // Check if user has permission to edit this item
+          if (user && item.user && item.user._id !== user._id) {
+            setError("You don't have permission to edit this item");
+            return;
+          }
+          
+          // Populate form data
+          setFormData({
+            type: item.type || 'lost',
+            title: item.title || '',
+            description: item.description || '',
+            category: item.category || '',
+            date: item.date ? new Date(item.date).toISOString().split('T')[0] : '',
+            address: item.location?.address || '',
+            city: item.location?.city || '',
+            state: item.location?.state || '',
+          });
+          
+          // Set images
+          if (item.images && item.images.length > 0) {
+            setImagePreview(item.images);
+          }
+        } else {
+          setError('Failed to load item');
+        }
+      } catch (err) {
+        setError('Error loading item details');
+        console.error(err);
+      } finally {
+        setFetchLoading(false);
+      }
+    };
+    
+    fetchItem();
+  }, [id, user]);
   
   // Handle input changes
   const handleChange = (e) => {
@@ -88,24 +142,33 @@ const CreateItemPage = () => {
       console.log('Item data to submit:', itemData);
       console.log('Images to upload:', images);
       
-      // Simulate API call
+      // In a real implementation, we'd do a PUT/PATCH request to update the item
+      // For now, we'll just simulate success
       setTimeout(() => {
         setLoading(false);
-        navigate('/my-items');
+        navigate(`/items/${id}`);
       }, 1500);
       
     } catch (err) {
       console.error(err);
-      setError('Failed to create item. Please try again.');
+      setError('Failed to update item. Please try again.');
       setLoading(false);
     }
   };
   
+  if (fetchLoading) {
+    return (
+      <Container className="py-5 text-center">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </Container>
+    );
+  }
+  
   return (
     <Container className="py-5">
-      <h1 className="mb-4">
-        {formData.type === 'lost' ? 'Report a Lost Item' : 'Report a Found Item'}
-      </h1>
+      <h1 className="mb-4">Edit Item</h1>
       
       {error && <Alert variant="danger">{error}</Alert>}
       
@@ -238,7 +301,7 @@ const CreateItemPage = () => {
             </Row>
             
             <h5 className="mt-4">Images</h5>
-            <p className="text-muted">Adding images helps others identify your item.</p>
+            <p className="text-muted">Adding new images will replace the existing ones.</p>
             
             <Form.Group className="mb-3">
               <Form.Control
@@ -279,7 +342,7 @@ const CreateItemPage = () => {
                 Cancel
               </Button>
               <Button type="submit" variant="primary" disabled={loading}>
-                {loading ? 'Submitting...' : 'Submit Report'}
+                {loading ? 'Saving Changes...' : 'Save Changes'}
               </Button>
             </div>
           </Form>
@@ -289,4 +352,4 @@ const CreateItemPage = () => {
   );
 };
 
-export default CreateItemPage;
+export default EditItemPage;
