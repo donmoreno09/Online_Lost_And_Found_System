@@ -1,9 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
-import userRouter from './router/users.js';
 import itemRouter from './router/items.js';
-import authRoutes from './routes/authRoutes.js';
 import connectDB from './config/db.js';
 
 const server = express();
@@ -19,7 +17,6 @@ server.use(express.json());
 // Routes
 server.use('/api/auth', authRoutes);
 server.use('/api/items', itemRouter);
-server.use(userRouter);
 
 // Health check endpoint
 server.get('/health', (req, res) => {
