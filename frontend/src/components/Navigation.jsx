@@ -1,12 +1,21 @@
-import React from 'react';
-import { Navbar, Container, Nav, NavDropdown, Image } from 'react-bootstrap';
+import React, { useEffect } from 'react';
+import { Navbar, Container, Nav, NavDropdown, Image, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Navigation = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   
+  // Debug del tema
+  console.log('Current theme:', theme);
+  useEffect(() => {
+    console.log('Theme changed to:', theme);
+    console.log('Dark theme class present:', document.body.classList.contains('dark-theme'));
+  }, [theme]);
+
   // Function to generate default avatar if user has no image
   const getProfileImage = () => {
     if (user?.avatar) {
@@ -22,7 +31,7 @@ const Navigation = () => {
   };
 
   return (
-    <Navbar bg="primary" variant="dark" expand="lg">
+    <Navbar bg="primary" variant="dark" expand="lg" className="navbar-custom">
       <Container>
         <Navbar.Brand as={Link} to="/">Lost & Found</Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
@@ -63,6 +72,33 @@ const Navigation = () => {
                 <NavDropdown.Item onClick={handleLogout}>Logout</NavDropdown.Item>
               </NavDropdown>
             )}
+            
+            {/* Theme Switcher Dropdown */}
+            <NavDropdown 
+              title={
+                <span>
+                  {theme === 'light' ? (
+                    <i className="bi bi-brightness-high"></i>
+                  ) : theme === 'dark' ? (
+                    <i className="bi bi-moon-fill"></i>
+                  ) : (
+                    <i className="bi bi-circle-half"></i>
+                  )}
+                </span>
+              }
+              id="theme-dropdown"
+              className="theme-toggle-dropdown"
+            >
+              <NavDropdown.Item onClick={() => setTheme('light')}>
+                <i className="bi bi-brightness-high me-2"></i> Light
+              </NavDropdown.Item>
+              <NavDropdown.Item onClick={() => setTheme('dark')}>
+                <i className="bi bi-moon-fill me-2"></i> Dark
+              </NavDropdown.Item>
+              <NavDropdown.Item onClick={() => setTheme('system')}>
+                <i className="bi bi-circle-half me-2"></i> System
+              </NavDropdown.Item>
+            </NavDropdown>
           </Nav>
         </Navbar.Collapse>
       </Container>

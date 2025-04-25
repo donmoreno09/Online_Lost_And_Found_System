@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Navigation from './components/Navigation';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -18,27 +19,29 @@ import Footer from './components/Footer';
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Navigation />
-        <Container className="main-content py-4">
-          <Routes>
-            {/* Route pubbliche */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/items/:id" element={<ItemDetailPage />} />
-            
-            {/* Route protette */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/my-items" element={<MyItemsPage />} />
-              <Route path="/create-item" element={<CreateItemPage />} />
-              <Route path="/items/edit/:id" element={<EditItemPage />} />
-            </Route>
-          </Routes>
-        </Container>
-        <Footer />
-      </Router>
+      <ThemeProvider>
+        <Router>
+          <Navigation />
+          <Container className="main-content py-4">
+            <Routes>
+              {/* Route pubbliche */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/items/:id" element={<ItemDetailPage />} />
+              
+              {/* Route protette */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/my-items" element={<MyItemsPage />} />
+                <Route path="/create-item" element={<CreateItemPage />} />
+                <Route path="/items/edit/:id" element={<EditItemPage />} />
+              </Route>
+            </Routes>
+          </Container>
+          <Footer />
+        </Router>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
