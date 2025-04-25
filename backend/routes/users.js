@@ -79,9 +79,45 @@ router.post('/register', uploadCloudinary.single('avatar'), async (req, res) => 
             await mailer.sendMail({
                 from: process.env.EMAIL_FROM,
                 to: email,
-                subject: 'Benvenuto nella nostra piattaforma!',
-                text: `Ciao ${firstName}, benvenuto nella nostra piattaforma!`,
-                html: `<h1>Ciao ${firstName}!</h1><p>Benvenuto nella nostra piattaforma!</p>`
+                subject: 'Benvenuto su Lost & Found - Il tuo account è stato creato!',
+                text: `Ciao ${firstName}, grazie per esserti iscritto alla nostra piattaforma Lost & Found!`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <h1 style="color: #0d6efd;">Benvenuto su Lost & Found!</h1>
+                        </div>
+                        
+                        <p>Ciao ${firstName},</p>
+                        
+                        <p>Grazie per esserti iscritto alla nostra piattaforma Lost & Found! Siamo entusiasti di averti come parte della nostra comunità dedicata ad aiutare le persone a ritrovare i loro oggetti smarriti.</p>
+                        
+                        <h3 style="color: #0d6efd;">Cosa puoi fare sulla nostra piattaforma?</h3>
+                        <ul>
+                            <li>Segnalare oggetti che hai trovato per aiutarli a tornare dai loro proprietari</li>
+                            <li>Pubblicare annunci di oggetti che hai perso per aumentare le possibilità di ritrovarli</li>
+                            <li>Cercare nel nostro database di oggetti smarriti e ritrovati</li>
+                            <li>Comunicare in sicurezza con altri utenti attraverso il nostro sistema di messaggistica</li>
+                        </ul>
+                        
+                        <p>Crediamo nel potere della comunità per aiutarci a vicenda, e con la tua partecipazione, possiamo rendere il processo di recupero degli oggetti smarriti più efficiente e di successo.</p>
+                        
+                        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <h4 style="margin-top: 0; color: #0d6efd;">Per iniziare:</h4>
+                            <p>1. Completa il tuo profilo con informazioni aggiuntive</p>
+                            <p>2. Sfoglia gli oggetti esistenti</p>
+                            <p>3. Crea il tuo primo annuncio di oggetto smarrito o ritrovato</p>
+                        </div>
+                        
+                        <p>Se hai domande o hai bisogno di assistenza, non esitare a contattare il nostro team di supporto.</p>
+                        
+                        <p>Cordiali saluti,<br>Il Team di Lost & Found</p>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d; text-align: center;">
+                            <p>Questo è un messaggio automatico, si prega di non rispondere direttamente a questa email.</p>
+                            <p>&copy; ${new Date().getFullYear()} Lost & Found System. Tutti i diritti riservati.</p>
+                        </div>
+                    </div>
+                `
             });
             console.log('Email di benvenuto inviata a:', email);
         } catch (emailError) {
