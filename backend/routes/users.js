@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import auth from '../middleware/auth.js';
 import uploadCloudinary from '../middleware/uploadCloudinary.js';
+import mailer from '../helpers/mailer.js';
 
 const router = express.Router();
 
@@ -72,6 +73,21 @@ router.post('/register', uploadCloudinary.single('avatar'), async (req, res) => 
         // Rimuovi password dalla risposta
         const userResponse = newUser.toObject();
         delete userResponse.password;
+
+        // Invia email di benvenuto
+        try {
+            await mailer.sendMail({
+                from: process.env.EMAIL_FROM,
+                to: email,
+                subject: 'Benvenuto nella nostra piattaforma!',
+                text: `Ciao ${firstName}, benvenuto nella nostra piattaforma!`,
+                html: `<h1>Ciao ${firstName}!</h1><p>Benvenuto nella nostra piattaforma!</p>`
+            });
+            console.log('Email di benvenuto inviata a:', email);
+        } catch (emailError) {
+            console.error('Errore nell\'invio dell\'email di benvenuto:', emailError);
+            // Non bloccare la registrazione se l'invio dell'email fallisce
+        }
         
         res.status(201).json({
             success: true,
