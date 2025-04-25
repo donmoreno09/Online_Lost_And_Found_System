@@ -77,7 +77,6 @@ const CreateItemPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    console.log("DEBUG: Form submission started - NEW APPROACH");
     
     // Validazione base
     if (!formData.title || !formData.description || !formData.category || !formData.date) {
@@ -88,97 +87,50 @@ const CreateItemPage = () => {
     try {
       setLoading(true);
       
-      // NUOVO APPROCCIO: Prima carichiamo solo le immagini, poi i dati del form
-      let imageUrls = [];
+      // Prepara i dati per l'invio come FormData per supportare i file
+      const formDataToSend = new FormData();
       
-      // Step 1: Carica le immagini se presenti
-      if (images.length > 0) {
-        console.log("DEBUG: Uploading images first");
-        
-        // Crea un FormData solo per le immagini
-        const imageFormData = new FormData();
-        images.forEach(image => {
-          imageFormData.append('images', image);
-        });
-        
-        // Aggiungi il token
-        const token = localStorage.getItem('token');
-        const headers = {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        };
-        
-        // Carica le immagini
-        try {
-          const imageResponse = await axios.post(
-            `${API_URL}/upload`, 
-            imageFormData,
-            { headers }
-          );
-          
-          if (imageResponse.data && imageResponse.data.success) {
-            imageUrls = imageResponse.data.urls || [];
-            console.log("DEBUG: Images uploaded successfully:", imageUrls);
-          }
-        } catch (imageError) {
-          console.error("DEBUG: Error uploading images:", imageError);
-          // Continuiamo anche senza immagini
-        }
-      }
+      // Aggiungi i campi del form
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('type', formData.type);
+      formDataToSend.append('date', formData.date);
       
-      // Step 2: Invia i dati del form come JSON
-      console.log("DEBUG: Sending form data as JSON");
+      // Aggiungi i campi di location
+      formDataToSend.append('location[address]', formData.address);
+      formDataToSend.append('location[city]', formData.city);
+      formDataToSend.append('location[state]', formData.state);
       
-      // Prepara i dati come oggetto JSON
-      const itemData = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        type: formData.type,
-        date: formData.date,
-        location: {
-          address: formData.address,
-          city: formData.city,
-          state: formData.state
-        },
-        images: imageUrls
-      };
-      
-      console.log("DEBUG: Item data:", itemData);
-      
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_URL}/items`, itemData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+      // Aggiungi le immagini
+      images.forEach(image => {
+        formDataToSend.append('images', image);
       });
       
-      console.log("DEBUG: Response received:", response.status);
-      console.log("DEBUG: Response data:", response.data);
+      console.log("Invio dati al server...");
       
-      if (response.data && response.data.success) {
+      // Invia la richiesta con autenticazione
+      const response = await axios.post(`${API_URL}/items`, formDataToSend, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      console.log("Risposta dal server:", response.data);
+      
+      if (response.data.success) {
+        // Reindirizza alla pagina dei dettagli dell'oggetto creato
         navigate(`/items/${response.data.data._id}`);
       } else {
         setError('Errore nel salvataggio dell\'oggetto');
       }
     } catch (err) {
-      console.error('DEBUG: Error details:', err);
+      console.error("Errore nella creazione dell'oggetto:", err);
       
-      let errorMessage = 'Si è verificato un errore durante la pubblicazione dell\'annuncio';
+      // Messaggio di errore più dettagliato
       if (err.response) {
-        console.error('DEBUG: Error response status:', err.response.status);
-        console.error('DEBUG: Error response data:', err.response.data);
-        
-        if (err.response.status === 401) {
-          errorMessage = 'Sessione scaduta. Effettua nuovamente il login.';
-          setTimeout(() => navigate('/login'), 2000);
-        } else if (err.response.data && err.response.data.message) {
-          errorMessage = err.response.data.message;
-        }
+        setError(err.response.data?.message || 'Errore nella pubblicazione dell\'annuncio');
+      } else {
+        setError('Si è verificato un errore durante la pubblicazione dell\'annuncio');
       }
-      
-      setError(errorMessage);
     } finally {
       setLoading(false);
     }

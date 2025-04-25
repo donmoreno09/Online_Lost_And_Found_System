@@ -9,20 +9,32 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const getBadgeVariant = (type) => {
-    return type === 'lost' ? 'danger' : 'success';
-  };
-
-  // Function to format date
+  // Formatta la data
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return new Date(dateString).toLocaleDateString('it-IT', options);
   };
-
-  // Default image if none provided
-  const imageUrl = item.images && item.images.length > 0 
-    ? item.images[0] 
-    : 'https://via.placeholder.com/300x200?text=No+Image';
+  
+  // Ottiene l'URL dell'immagine formattato correttamente
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '/placeholder-image.jpg';
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${API_URL}/${imagePath.replace(/^\//, '')}`;
+  };
+  
+  // Traduzione delle categorie in italiano
+  const getCategoryLabel = (category) => {
+    const categories = {
+      'electronics': 'Elettronica',
+      'jewelry': 'Gioielli',
+      'clothing': 'Abbigliamento',
+      'accessories': 'Accessori',
+      'documents': 'Documenti',
+      'other': 'Altro'
+    };
+    return categories[category] || category;
+  };
 
   const handleDelete = async () => {
     setLoading(true);
@@ -32,7 +44,6 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
       if (onDelete) onDelete(item._id);
     } catch (err) {
       console.error('Error deleting item:', err);
-      // Qui potresti gestire meglio l'errore mostrando un messaggio utente
     } finally {
       setLoading(false);
     }
@@ -41,30 +52,43 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
   return (
     <>
       <Card className="h-100 shadow-sm mb-4">
-        <Card.Img 
-          variant="top" 
-          src={imageUrl} 
-          style={{ height: '180px', objectFit: 'cover' }}
-        />
-        <Card.Body>
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <Badge bg={getBadgeVariant(item.type)}>
-              {item.type === 'lost' ? 'Lost' : 'Found'}
+        <div style={{ height: '180px', overflow: 'hidden', position: 'relative' }}>
+          <Card.Img 
+            variant="top" 
+            src={getImageUrl(item.images && item.images[0])} 
+            style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = '/placeholder-image.jpg';
+            }}
+          />
+          <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
+            <Badge bg={item.type === 'lost' ? 'danger' : 'success'}>
+              {item.type === 'lost' ? 'Smarrito' : 'Trovato'}
             </Badge>
-            <small className="text-muted">{formatDate(item.date)}</small>
           </div>
+        </div>
+        
+        <Card.Body>
           <Card.Title>{item.title}</Card.Title>
-          <Card.Text className="mb-2">
-            {item.description.substring(0, 100)}...
-          </Card.Text>
-          <div className="mb-3">
+          
+          <div className="mb-2">
             <Badge bg="secondary" className="me-2">
-              {item.category}
+              {getCategoryLabel(item.category)}
             </Badge>
             <small className="text-muted">
-              {item.location.city}, {item.location.state}
+              {formatDate(item.date)}
             </small>
           </div>
+          
+          <Card.Text className="mb-2 text-truncate">
+            {item.description}
+          </Card.Text>
+          
+          <p className="text-muted small mb-3">
+            <i className="bi bi-geo-alt me-1"></i>
+            {item.location.city}, {item.location.state}
+          </p>
           
           <div className="d-grid mb-2">
             <Button 
@@ -73,7 +97,7 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
               variant="outline-primary" 
               size="sm"
             >
-              View Details
+              Visualizza dettagli
             </Button>
           </div>
           
@@ -85,38 +109,38 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
                 variant="outline-secondary" 
                 size="sm"
               >
-                Edit
+                Modifica
               </Button>
               <Button 
                 variant="outline-danger" 
                 size="sm"
                 onClick={() => setShowModal(true)}
               >
-                Delete
+                Elimina
               </Button>
             </div>
           )}
         </Card.Body>
       </Card>
       
-      {/* Confirmation Modal */}
+      {/* Finestra di conferma */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>Confirm Deletion</Modal.Title>
+          <Modal.Title>Conferma eliminazione</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Are you sure you want to delete "{item.title}"? This action cannot be undone.
+          Sei sicuro di voler eliminare "{item.title}"? Questa azione non può essere annullata.
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Cancel
+            Annulla
           </Button>
           <Button 
             variant="danger" 
             onClick={handleDelete}
             disabled={loading}
           >
-            {loading ? 'Deleting...' : 'Delete'}
+            {loading ? 'Eliminazione...' : 'Elimina'}
           </Button>
         </Modal.Footer>
       </Modal>

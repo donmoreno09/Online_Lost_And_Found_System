@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Alert, Spinner } from 'react-bootstrap';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
@@ -12,6 +12,7 @@ const ItemDetailPage = () => {
   const [error, setError] = useState('');
   const { id } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const fetchItemDetails = useCallback(async () => {
     try {
@@ -39,12 +40,19 @@ const ItemDetailPage = () => {
   // Formatta la data
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return new Date(dateString).toLocaleDateString('it-IT', options);
   };
 
   // Colore del badge in base al tipo di oggetto
   const getBadgeVariant = (type) => {
     return type === 'lost' ? 'danger' : 'success';
+  };
+
+  // Gestire il corretto URL delle immagini
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '/placeholder-image.jpg';
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${API_URL}/${imagePath.replace(/^\//, '')}`;
   };
 
   if (loading) {
@@ -75,40 +83,13 @@ const ItemDetailPage = () => {
     );
   }
 
-  // Immagine di default se non ce ne sono
-  const imageUrl = item.images && item.images.length > 0 
-    ? item.images[0] 
-    : 'https://via.placeholder.com/600x400?text=Nessuna+Immagine';
+  // Controlla se l'utente è il proprietario dell'item
+  const isOwner = user && user._id === (item.user && item.user._id);
 
   return (
     <Container className="py-5">
-      <Row>
+      <Row className="mb-4">
         <Col lg={7}>
-          <img 
-            src={imageUrl} 
-            alt={item.title} 
-            className="img-fluid rounded" 
-            style={{ maxHeight: '500px', width: '100%', objectFit: 'cover' }}
-          />
-          
-          {/* Galleria immagini aggiuntive */}
-          {item.images && item.images.length > 1 && (
-            <Row className="mt-3">
-              {item.images.slice(1).map((image, index) => (
-                <Col xs={3} key={index}>
-                  <img 
-                    src={image} 
-                    alt={`Vista aggiuntiva ${index + 1}`} 
-                    className="img-fluid rounded" 
-                    style={{ height: '100px', width: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                  />
-                </Col>
-              ))}
-            </Row>
-          )}
-        </Col>
-        
-        <Col lg={5}>
           <div className="d-flex align-items-center mb-3">
             <Badge bg={getBadgeVariant(item.type)} className="me-2 p-2">
               {item.type === 'lost' ? 'OGGETTO SMARRITO' : 'OGGETTO TROVATO'}
@@ -121,52 +102,135 @@ const ItemDetailPage = () => {
           <p className="text-muted">
             {item.type === 'lost' ? 'Smarrito il' : 'Trovato il'}: {formatDate(item.date)}
           </p>
-          
-          <Card className="mb-4">
-            <Card.Body>
-              <h5>Descrizione</h5>
-              <p>{item.description}</p>
-            </Card.Body>
-          </Card>
-          
-          <Card className="mb-4">
-            <Card.Body>
-              <h5>Posizione</h5>
-              <p className="mb-1"><strong>Indirizzo:</strong> {item.location.address}</p>
-              <p className="mb-0"><strong>Area:</strong> {item.location.city}, {item.location.state}</p>
-            </Card.Body>
-          </Card>
-          
-          {item.user && (
-            <Card className="mb-4">
-              <Card.Body>
-                <h5>Informazioni di contatto</h5>
-                <p className="mb-1"><strong>Pubblicato da:</strong> {item.user.firstName} {item.user.lastName}</p>
-                
-                {/* Mostra opzioni di modifica se l'utente è il proprietario */}
-                {user && item.user._id === user._id && (
-                  <div className="mt-3">
-                    <Button 
-                      as={Link} 
-                      to={`/items/edit/${item._id}`} 
-                      variant="outline-primary" 
-                      className="me-2"
-                    >
-                      Modifica
-                    </Button>
-                  </div>
-                )}
-              </Card.Body>
-            </Card>
-          )}
-          
+        </Col>
+        <Col lg={5} className="d-flex justify-content-lg-end align-items-center">
           <Button 
             as={Link} 
             to="/" 
-            variant="secondary"
+            variant="outline-primary"
+            className="me-2"
           >
             Torna agli annunci
           </Button>
+          
+          {isOwner && (
+            <Button 
+              as={Link} 
+              to={`/items/edit/${item._id}`} 
+              variant="outline-secondary"
+            >
+              Modifica
+            </Button>
+          )}
+        </Col>
+      </Row>
+
+      <Row>
+        <Col lg={7}>
+          {/* Immagine principale */}
+          <Card className="mb-4 overflow-hidden">
+            <div style={{ height: "400px", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: "#f8f9fa" }}>
+              {item.images && item.images.length > 0 ? (
+                <img 
+                  src={getImageUrl(item.images[0])} 
+                  alt={item.title} 
+                  style={{ 
+                    maxHeight: "100%", 
+                    maxWidth: "100%", 
+                    objectFit: "contain" 
+                  }}
+                />
+              ) : (
+                <div className="text-center text-muted">
+                  <i className="bi bi-card-image" style={{ fontSize: "5rem" }}></i>
+                  <p>Nessuna immagine disponibile</p>
+                </div>
+              )}
+            </div>
+          </Card>
+          
+          {/* Galleria immagini aggiuntive */}
+          {item.images && item.images.length > 1 && (
+            <Row className="mb-4">
+              {item.images.slice(1).map((image, index) => (
+                <Col xs={3} key={index} className="mb-2">
+                  <img 
+                    src={getImageUrl(image)} 
+                    alt={`Vista aggiuntiva ${index + 1}`} 
+                    className="img-thumbnail" 
+                    style={{ height: '80px', width: '100%', objectFit: 'cover' }}
+                  />
+                </Col>
+              ))}
+            </Row>
+          )}
+          
+          {/* Descrizione */}
+          <Card className="mb-4">
+            <Card.Body>
+              <h5>Descrizione</h5>
+              <p className="mb-0">{item.description}</p>
+            </Card.Body>
+          </Card>
+        </Col>
+        
+        <Col lg={5}>
+          {/* Posizione - MODIFICATA per rimuovere "area" */}
+          <Card className="mb-4">
+            <Card.Body>
+              <h5>Posizione</h5>
+              <p className="mb-0">
+                <strong>Indirizzo:</strong> {item.location.address}<br />
+                {item.location.city}, {item.location.state}
+              </p>
+            </Card.Body>
+          </Card>
+          
+          {/* Informazioni di contatto - MODIFICATE per includere email e telefono */}
+          <Card className="mb-4">
+            <Card.Body>
+              <h5>Informazioni di contatto</h5>
+              {item.user && (
+                <>
+                  <p className="mb-2">
+                    <strong>Nome:</strong> {item.user.firstName} {item.user.lastName}
+                  </p>
+                  
+                  {item.user.email && (
+                    <p className="mb-2">
+                      <strong>Email:</strong> <a href={`mailto:${item.user.email}`}>{item.user.email}</a>
+                    </p>
+                  )}
+                  
+                  {item.user.phone && (
+                    <p className="mb-0">
+                      <strong>Telefono:</strong> <a href={`tel:${item.user.phone}`}>{item.user.phone}</a>
+                    </p>
+                  )}
+                </>
+              )}
+              {(!item.user || (!item.user.email && !item.user.phone)) && (
+                <p className="text-muted mb-0">Informazioni di contatto non disponibili</p>
+              )}
+            </Card.Body>
+          </Card>
+          
+          {/* Stato */}
+          <Card>
+            <Card.Body>
+              <h5>Stato</h5>
+              <Badge 
+                bg={item.status === 'open' ? 'info' : 
+                    item.status === 'claimed' ? 'warning' : 
+                    item.status === 'resolved' ? 'success' : 'secondary'}
+                className="p-2"
+              >
+                {item.status === 'open' ? 'Aperto' : 
+                 item.status === 'claimed' ? 'Reclamato' : 
+                 item.status === 'resolved' ? 'Risolto' : 'Scaduto'}
+              </Badge>
+            </Card.Body>
+          </Card>
         </Col>
       </Row>
     </Container>
