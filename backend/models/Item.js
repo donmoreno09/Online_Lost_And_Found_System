@@ -1,58 +1,65 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const itemSchema = new mongoose.Schema({
-    type : {
-        type: String,
-        enum: ['lost', 'found'],
-        required: true,
+  title: {
+    type: String,
+    required: [true, 'Please provide a title'],
+    trim: true,
+    maxlength: [100, 'Title cannot be more than 100 characters']
+  },
+  description: {
+    type: String,
+    required: [true, 'Please provide a description'],
+    trim: true
+  },
+  category: {
+    type: String,
+    required: [true, 'Please provide a category'],
+    enum: ['electronics', 'jewelry', 'clothing', 'accessories', 'documents', 'other']
+  },
+  type: {
+    type: String,
+    required: [true, 'Please specify if the item is lost or found'],
+    enum: ['lost', 'found']
+  },
+  date: {
+    type: Date,
+    default: Date.now
+  },
+  // MODIFICATA: Struttura della location semplificata
+  location: {
+    address: {
+      type: String,
+      default: ''
     },
-    title : {
-        type: String, 
-        required: [true, 'Please provide a title'],
-        trim: true,
-        maxlength: [100, 'Title cannot be more than 100 characters'],
+    city: {
+      type: String,
+      default: ''
     },
-    description: {
-        type: String,
-        required: [true, 'Please provide a description'],
-        maxlength: [500, 'Description cannot be more than 500 characters'],
-    },
-    category: {
-        type: String,
-        enum: ['electronics', 'jewelry', 'clothing', 'accessories', 'documents', 'other'],
-        required: [true, 'Please provide a category'],
-    },
-    location: {
-        type: {
-            address: String,
-            city: String,
-            state: String,
-        },
-        required: [true, 'Please provide a location'],
-    },
-    date : {
-        type: Date,
-        default: Date.now,
-    },
-    images: [{
-        type: String
-    }],
-    status: {
-        type: String,
-        enum: ['open', 'claimed', 'resolved', 'expired'],
-        default: 'open'
-    },
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        // required: true
-    },
-    claimedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        default: null
+    state: {
+      type: String,
+      default: ''
     }
-}, {timestamps : true});
+  },
+  images: [String],
+  status: {
+    type: String,
+    enum: ['open', 'claimed', 'resolved', 'expired'],
+    default: 'open'
+  },
+  user: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    required: [true, 'An item must belong to a user']
+  },
+  claimedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    default: null
+  }
+}, {
+  timestamps: true
+});
 
 const Item = mongoose.model('Item', itemSchema);
 

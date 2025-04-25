@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Card, Badge, Button, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Button, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -13,6 +13,10 @@ const ItemDetailPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  // Stato per il modale delle immagini
+  const [showModal, setShowModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
 
   const fetchItemDetails = useCallback(async () => {
     try {
@@ -53,6 +57,12 @@ const ItemDetailPage = () => {
     if (!imagePath) return '/placeholder-image.jpg';
     if (imagePath.startsWith('http')) return imagePath;
     return `${API_URL}/${imagePath.replace(/^\//, '')}`;
+  };
+  
+  // Funzione per aprire il modale con l'immagine selezionata
+  const handleImageClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setShowModal(true);
   };
 
   if (loading) {
@@ -127,9 +137,23 @@ const ItemDetailPage = () => {
 
       <Row>
         <Col lg={7}>
-          {/* Immagine principale */}
+          {/* Immagine principale - MODIFICATA PER ESSERE CLICCABILE */}
           <Card className="mb-4 overflow-hidden">
-            <div style={{ height: "400px", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: "#f8f9fa" }}>
+            <div 
+              style={{ 
+                height: "400px", 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center", 
+                backgroundColor: "#f8f9fa",
+                cursor: item.images && item.images.length > 0 ? 'pointer' : 'default'
+              }}
+              onClick={() => {
+                if (item.images && item.images.length > 0) {
+                  handleImageClick(getImageUrl(item.images[0]));
+                }
+              }}
+            >
               {item.images && item.images.length > 0 ? (
                 <img 
                   src={getImageUrl(item.images[0])} 
@@ -149,7 +173,7 @@ const ItemDetailPage = () => {
             </div>
           </Card>
           
-          {/* Galleria immagini aggiuntive */}
+          {/* Galleria immagini aggiuntive - MODIFICATA PER ESSERE CLICCABILE */}
           {item.images && item.images.length > 1 && (
             <Row className="mb-4">
               {item.images.slice(1).map((image, index) => (
@@ -158,7 +182,13 @@ const ItemDetailPage = () => {
                     src={getImageUrl(image)} 
                     alt={`Vista aggiuntiva ${index + 1}`} 
                     className="img-thumbnail" 
-                    style={{ height: '80px', width: '100%', objectFit: 'cover' }}
+                    style={{ 
+                      height: '80px', 
+                      width: '100%', 
+                      objectFit: 'cover',
+                      cursor: 'pointer' 
+                    }}
+                    onClick={() => handleImageClick(getImageUrl(image))}
                   />
                 </Col>
               ))}
@@ -175,18 +205,35 @@ const ItemDetailPage = () => {
         </Col>
         
         <Col lg={5}>
-          {/* Posizione - MODIFICATA per rimuovere "area" */}
+          {/* Posizione - Soluzione semplificata e definitiva */}
           <Card className="mb-4">
             <Card.Body>
               <h5>Posizione</h5>
-              <p className="mb-0">
-                <strong>Indirizzo:</strong> {item.location.address}<br />
-                {item.location.city}, {item.location.state}
-              </p>
+              {(() => {
+                // Debug per verificare i dati
+                console.log("Location data:", item.location);
+                
+                if (item.location && (item.location.address || item.location.city || item.location.state)) {
+                  return (
+                    <>
+                      {item.location.address && (
+                        <p className="mb-2">
+                          <strong>Indirizzo:</strong> {item.location.address}
+                        </p>
+                      )}
+                      <p className="mb-0">
+                        {item.location.city || ''}{item.location.city && item.location.state ? ', ' : ''}{item.location.state || ''}
+                      </p>
+                    </>
+                  );
+                } else {
+                  return <p className="text-muted mb-0">Informazioni sulla posizione non disponibili</p>;
+                }
+              })()}
             </Card.Body>
           </Card>
           
-          {/* Informazioni di contatto - MODIFICATE per includere email e telefono */}
+          {/* Informazioni di contatto */}
           <Card className="mb-4">
             <Card.Body>
               <h5>Informazioni di contatto</h5>
@@ -233,6 +280,33 @@ const ItemDetailPage = () => {
           </Card>
         </Col>
       </Row>
+      
+      {/* Modal per visualizzare le immagini ingrandite */}
+      <Modal 
+        show={showModal} 
+        onHide={() => setShowModal(false)} 
+        size="lg"
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Immagine dettagliata</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="text-center p-0">
+          <img 
+            src={selectedImage} 
+            alt="Immagine dettagliata" 
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: 'calc(100vh - 200px)' 
+            }} 
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            Chiudi
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

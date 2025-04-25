@@ -87,7 +87,13 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
           
           <p className="text-muted small mb-3">
             <i className="bi bi-geo-alt me-1"></i>
-            {item.location.city}, {item.location.state}
+            {item.location && (
+              <>
+                {item.location.city || ''}
+                {item.location.city && item.location.state ? ', ' : ''}
+                {item.location.state || ''}
+              </>
+            )}
           </p>
           
           <div className="d-grid mb-2">

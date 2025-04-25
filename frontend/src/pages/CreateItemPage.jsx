@@ -97,10 +97,27 @@ const CreateItemPage = () => {
       formDataToSend.append('type', formData.type);
       formDataToSend.append('date', formData.date);
       
-      // Aggiungi i campi di location
-      formDataToSend.append('location[address]', formData.address);
-      formDataToSend.append('location[city]', formData.city);
-      formDataToSend.append('location[state]', formData.state);
+      // CORREZIONE: Invia location come stringa JSON
+      const locationData = {
+        address: formData.address,
+        city: formData.city,
+        state: formData.state
+      };
+      
+      // Aggiungi la location come campo separato
+      formDataToSend.append('locationJson', JSON.stringify(locationData));
+      
+      // Per retrocompatibilità, aggiungi anche i campi singoli
+      formDataToSend.append('address', formData.address);
+      formDataToSend.append('city', formData.city);
+      formDataToSend.append('state', formData.state);
+      
+      // Log dei dati per debug
+      console.log("Dati location:", {
+        address: formData.address,
+        city: formData.city,
+        state: formData.state
+      });
       
       // Aggiungi le immagini
       images.forEach(image => {

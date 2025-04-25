@@ -110,48 +110,52 @@ const EditItemPage = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!formData.title || !formData.description || !formData.category) {
-      setError('Please fill in all required fields');
-      return;
-    }
+    setError('');
     
     try {
       setLoading(true);
       
-      // Prepare the data for submission
-      const itemData = {
-        ...formData,
-        location: {
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          coordinate: {
-            lat: 0, // In a real app, you would use geolocation or a maps API
-            lng: 0
-          }
-        }
-      };
+      // Prepara i dati per l'invio
+      const formDataToSend = new FormData();
       
-      // Remove the flattened location fields
-      delete itemData.address;
-      delete itemData.city;
-      delete itemData.state;
+      // Aggiungi i campi del form
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('type', formData.type);
+      formDataToSend.append('date', formData.date);
       
-      console.log('Item data to submit:', itemData);
-      console.log('Images to upload:', images);
+      // MODIFICATO: Location con formato adattato alla nuova struttura
+      formDataToSend.append('location[address]', formData.address);
+      formDataToSend.append('location[city]', formData.city);
+      formDataToSend.append('location[state]', formData.state);
       
-      // In a real implementation, we'd do a PUT/PATCH request to update the item
-      // For now, we'll just simulate success
-      setTimeout(() => {
-        setLoading(false);
+      // Aggiungi le immagini esistenti
+      if (imagePreview.length > 0) {
+        imagePreview.forEach(img => {
+          formDataToSend.append('images', img);
+        });
+      }
+      
+      // Aggiungi le nuove immagini
+      images.forEach(image => {
+        formDataToSend.append('images', image);
+      });
+      
+      // Invia la richiesta
+      const response = await axios.put(`${API_URL}/items/${id}`, formDataToSend, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      if (response.data.success) {
         navigate(`/items/${id}`);
-      }, 1500);
-      
+      } else {
+        setError('Errore nell\'aggiornamento dell\'oggetto');
+      }
     } catch (err) {
-      console.error(err);
-      setError('Failed to update item. Please try again.');
+      console.error('Errore:', err);
+      setError('Si è verificato un errore durante l\'aggiornamento');
+    } finally {
       setLoading(false);
     }
   };
