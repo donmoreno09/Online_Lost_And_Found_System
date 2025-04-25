@@ -11,7 +11,7 @@ import ProfilePage from './pages/ProfilePage';
 import MyItemsPage from './pages/MyItemsPage';
 import CreateItemPage from './pages/CreateItemPage';
 import ItemDetailPage from './pages/ItemDetailPage';
-import EditItemPage from './pages/EditItemPage'; // Add this import
+import EditItemPage from './pages/EditItemPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
 
