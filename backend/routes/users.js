@@ -2,8 +2,8 @@ import express from 'express';
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import auth from '../middleware/auth.js';
-import uploadCloudinary from '../middleware/uploadCloudinary.js';
+import auth from '../middlewares/auth.js';
+import uploadCloudinary from '../middlewares/uploadCloudinary.js';
 import mailer from '../helpers/mailer.js';
 
 const router = express.Router();

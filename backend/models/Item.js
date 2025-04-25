@@ -27,10 +27,6 @@ const itemSchema = new mongoose.Schema({
             address: String,
             city: String,
             state: String,
-            coordinate: {
-                lat: Number,
-                lng: Number
-            }
         },
         required: [true, 'Please provide a location'],
     },

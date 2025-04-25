@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Container, Form, Button, Card, Row, Col, Alert } from 'react-bootstrap';
+import { Form, Button, Container, Alert, Card, Row, Col } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const CreateItemPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   // Stato per i dati del form
   const [formData, setFormData] = useState({
-    type: 'lost', // Default: oggetto smarrito
+    type: 'lost',
     title: '',
     description: '',
     category: '',
@@ -71,9 +73,11 @@ const CreateItemPage = () => {
     setImagePreview(updatedPreviews);
   };
   
-  // Invio del form
+  // Invio del form con location corretta
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    console.log("DEBUG: Form submission started - NEW APPROACH");
     
     // Validazione base
     if (!formData.title || !formData.description || !formData.category || !formData.date) {
@@ -84,46 +88,97 @@ const CreateItemPage = () => {
     try {
       setLoading(true);
       
-      // Prepara i dati per l'invio
-      const formDataToSend = new FormData();
+      // NUOVO APPROCCIO: Prima carichiamo solo le immagini, poi i dati del form
+      let imageUrls = [];
       
-      // Aggiungi tutti i campi di base
-      Object.keys(formData).forEach(key => {
-        if (key !== 'address' && key !== 'city' && key !== 'state') {
-          formDataToSend.append(key, formData[key]);
+      // Step 1: Carica le immagini se presenti
+      if (images.length > 0) {
+        console.log("DEBUG: Uploading images first");
+        
+        // Crea un FormData solo per le immagini
+        const imageFormData = new FormData();
+        images.forEach(image => {
+          imageFormData.append('images', image);
+        });
+        
+        // Aggiungi il token
+        const token = localStorage.getItem('token');
+        const headers = {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        };
+        
+        // Carica le immagini
+        try {
+          const imageResponse = await axios.post(
+            `${API_URL}/upload`, 
+            imageFormData,
+            { headers }
+          );
+          
+          if (imageResponse.data && imageResponse.data.success) {
+            imageUrls = imageResponse.data.urls || [];
+            console.log("DEBUG: Images uploaded successfully:", imageUrls);
+          }
+        } catch (imageError) {
+          console.error("DEBUG: Error uploading images:", imageError);
+          // Continuiamo anche senza immagini
         }
-      });
+      }
       
-      // Aggiungi i dati di location
-      formDataToSend.append('location[address]', formData.address);
-      formDataToSend.append('location[city]', formData.city);
-      formDataToSend.append('location[state]', formData.state);
+      // Step 2: Invia i dati del form come JSON
+      console.log("DEBUG: Sending form data as JSON");
       
-      // Aggiungi le coordinate (in un'app reale, potrebbero essere recuperate da un'API di geocoding)
-      formDataToSend.append('location[coordinate][lat]', '0');
-      formDataToSend.append('location[coordinate][lng]', '0');
+      // Prepara i dati come oggetto JSON
+      const itemData = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        type: formData.type,
+        date: formData.date,
+        location: {
+          address: formData.address,
+          city: formData.city,
+          state: formData.state
+        },
+        images: imageUrls
+      };
       
-      // Aggiungi le immagini
-      images.forEach(image => {
-        formDataToSend.append('images', image);
-      });
+      console.log("DEBUG: Item data:", itemData);
       
-      // Invia i dati
-      const response = await axios.post(`${API_URL}/items`, formDataToSend, {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/items`, itemData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
       
-      if (response.data.success) {
-        // Reindirizza alla pagina dei dettagli dell'oggetto
+      console.log("DEBUG: Response received:", response.status);
+      console.log("DEBUG: Response data:", response.data);
+      
+      if (response.data && response.data.success) {
         navigate(`/items/${response.data.data._id}`);
       } else {
-        setError(response.data.message || 'Errore nel salvataggio dell\'oggetto');
+        setError('Errore nel salvataggio dell\'oggetto');
       }
     } catch (err) {
-      console.error('Errore nella creazione dell\'oggetto:', err);
-      setError(err.response?.data?.message || 'Si è verificato un errore');
+      console.error('DEBUG: Error details:', err);
+      
+      let errorMessage = 'Si è verificato un errore durante la pubblicazione dell\'annuncio';
+      if (err.response) {
+        console.error('DEBUG: Error response status:', err.response.status);
+        console.error('DEBUG: Error response data:', err.response.data);
+        
+        if (err.response.status === 401) {
+          errorMessage = 'Sessione scaduta. Effettua nuovamente il login.';
+          setTimeout(() => navigate('/login'), 2000);
+        } else if (err.response.data && err.response.data.message) {
+          errorMessage = err.response.data.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -219,7 +274,7 @@ const CreateItemPage = () => {
                     value={formData.date}
                     onChange={handleChange}
                     required
-                    max={new Date().toISOString().split('T')[0]} // Non si possono selezionare date future
+                    max={new Date().toISOString().split('T')[0]}
                   />
                 </Form.Group>
               </Col>

@@ -1,4 +1,3 @@
-css
 .App {
   text-align: center;
   min-height: 100vh;
@@ -49,118 +48,39 @@ footer {
   margin-top: auto;
 }
 
-/* Custom Theme Variables */
-:root {
-  /* Soft & Minimal Theme */
-  --background-light: #F9F9F9;
-  --primary-light: #6C63FF;
-  --accent-light: #FF6584;
-  --text-light: #333333;
-  --muted-light: #D6D6D6;
-  
-  /* Dark Mode Variables */
-  --background-dark: #1A1A1A;
-  --primary-dark: #8C85FF;
-  --accent-dark: #FF85A1;
-  --text-dark: #F0F0F0;
-  --muted-dark: #555555;
-  
-  /* Default theme (light) */
-  --background: var(--background-light);
-  --primary: var(--primary-light);
-  --accent: var(--accent-light);
-  --text: var(--text-light);
-  --muted: var(--muted-light);
-}
-
-/* Dark theme class */
-.dark-theme {
-  --background: var(--background-dark);
-  --primary: var(--primary-dark);
-  --accent: var(--accent-dark);
-  --text: var(--text-dark);
-  --muted: var(--muted-dark);
-}
-
-/* Apply theme colors to elements */
+/* Fixed theme colors */
 body {
-  background-color: var(--background);
-  color: var(--text);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  background-color: #F9F9F9;
+  color: #333333;
 }
 
 .navbar-custom {
-  background-color: var(--primary) !important;
+  background-color: #6C63FF !important;
 }
 
 .btn-primary {
-  background-color: var(--primary) !important;
-  border-color: var(--primary) !important;
+  background-color: #6C63FF !important;
+  border-color: #6C63FF !important;
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-dark) !important;
-  border-color: var(--primary-dark) !important;
+  background-color: #5850e6 !important;
+  border-color: #5850e6 !important;
 }
 
 .btn-accent {
-  background-color: var(--accent) !important;
-  border-color: var(--accent) !important;
+  background-color: #FF6584 !important;
+  border-color: #FF6584 !important;
   color: white;
 }
 
 .text-accent {
-  color: var(--accent) !important;
+  color: #FF6584 !important;
 }
 
 .card {
-  background-color: var(--background);
-  border-color: var(--muted);
-}
-
-.form-control {
-  background-color: var(--background);
-  border-color: var(--muted);
-  color: var(--text);
-}
-
-.form-control:focus {
-  background-color: var(--background);
-  color: var(--text);
-}
-
-/* Theme Toggle Button Styles */
-.theme-toggle-dropdown .dropdown-toggle::after {
-  display: none;
-}
-
-.theme-toggle-dropdown .dropdown-toggle {
-  color: rgba(255, 255, 255, 0.85);
-  padding: 0.5rem;
-  font-size: 1.2rem;
-}
-
-.theme-toggle-dropdown .dropdown-toggle:hover {
-  color: white;
-}
-
-.theme-toggle-dropdown .dropdown-menu {
-  min-width: 10rem;
-  padding: 0.5rem 0;
-}
-
-.theme-toggle-dropdown .dropdown-item {
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-}
-
-.theme-toggle-dropdown .dropdown-item i {
-  margin-right: 0.5rem;
-}
-
-/* Additional custom styles */
-.card {
+  background-color: #ffffff;
+  border-color: #D6D6D6;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -170,10 +90,17 @@ body {
   box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
 }
 
-/* Better form styling */
+.form-control {
+  background-color: #ffffff;
+  border-color: #D6D6D6;
+  color: #333333;
+}
+
 .form-control:focus {
+  background-color: #ffffff;
+  color: #333333;
   box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
-  border-color: var(--primary);
+  border-color: #6C63FF;
 }
 
 /* Navbar improvements */
