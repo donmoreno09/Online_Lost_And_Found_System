@@ -68,7 +68,7 @@ const RegisterPage = () => {
       const result = await register(registrationData);
       
       if (result.success) {
-        navigate('/login'); // Redirect to login page after registration
+        navigate('/'); // Redirect to login page after registration
       } else {
         setError(result.error);
       }

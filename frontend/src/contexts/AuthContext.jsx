@@ -16,6 +16,7 @@ axios.interceptors.request.use(config => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
 
   // Carica i dati dell'utente all'avvio
   useEffect(() => {
@@ -44,6 +45,28 @@ export const AuthProvider = ({ children }) => {
 
     loadUser();
   }, []);
+
+  // Funzione per recuperare le notifiche dell'utente
+  const fetchNotifications = async () => {
+    if (user) {
+      try {
+        const response = await axios.get(`${API_URL}/users/notifications`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        if (response.data.success) {
+          setNotifications(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    }
+  };
+
+  // Aggiorna le notifiche quando l'utente cambia
+  useEffect(() => {
+    fetchNotifications();
+  }, [user]);
 
   const login = async (credentials) => {
     try {
@@ -158,13 +181,15 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      login, 
-      logout, 
+      user,
+      loading,
+      error,
       register,
+      login,
+      logout,
       updateProfile,
-      isAuthenticated
+      notifications,
+      fetchNotifications // Per aggiornare manualmente le notifiche
     }}>
       {children}
     </AuthContext.Provider>

@@ -52,10 +52,33 @@ const itemSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'An item must belong to a user']
   },
+  // Aggiungi questi campi allo schema se non sono già presenti
+
   claimedBy: {
-    type: mongoose.Schema.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
+  },
+  claimInfo: {
+    firstName: String,
+    lastName: String,
+    email: String,
+    phone: String,
+    message: String,
+    date: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  claimStatus: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected'],
+    default: 'pending'
+  },
+  claimToken: {
+    accept: String,
+    reject: String,
+    expiry: Date
   }
 }, {
   timestamps: true

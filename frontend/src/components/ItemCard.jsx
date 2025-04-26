@@ -36,6 +36,22 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
     return categories[category] || category;
   };
 
+  // Aggiungi un badge che mostra lo stato dell'oggetto
+  const getStatusBadge = (status, claimStatus) => {
+    switch (status) {
+      case 'open':
+        return <Badge bg="success">Disponibile</Badge>;
+      case 'claimed':
+        return <Badge bg="warning">Reclamato {claimStatus === 'pending' ? '(in attesa)' : ''}</Badge>;
+      case 'resolved':
+        return <Badge bg="info">Risolto</Badge>;
+      case 'expired':
+        return <Badge bg="secondary">Scaduto</Badge>;
+      default:
+        return null;
+    }
+  };
+
   const handleDelete = async () => {
     setLoading(true);
     try {

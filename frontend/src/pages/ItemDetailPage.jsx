@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Row, Col, Card, Badge, Button, Alert, Spinner, Modal } from 'react-bootstrap';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Card, Badge, Button, Alert, Spinner, Modal, Form } from 'react-bootstrap';
+import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+
+// Importa il componente ClaimSuccessPage all'inizio del file
+import ClaimSuccessPage from './ClaimSuccessPage';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -12,11 +15,25 @@ const ItemDetailPage = () => {
   const [error, setError] = useState('');
   const { id } = useParams();
   const { user } = useAuth();
-  const navigate = useNavigate();
   
   // Stato per il modale delle immagini
   const [showModal, setShowModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
+
+  // Aggiungi questi stati all'inizio del componente
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  // Modifica la modalità in cui inizializziamo claimFormData
+  const [claimFormData, setClaimFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    message: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+
+  // All'inizio del componente, aggiungi questo stato
+  const [showSuccessPage, setShowSuccessPage] = useState(false);
 
   const fetchItemDetails = useCallback(async () => {
     try {
@@ -40,6 +57,13 @@ const ItemDetailPage = () => {
   useEffect(() => {
     fetchItemDetails();
   }, [fetchItemDetails]);
+  
+  // Aggiungi questo useEffect per debug temporaneo
+  useEffect(() => {
+    if (item && item.user) {
+      console.log('Dati utente ricevuti:', item.user);
+    }
+  }, [item]);
 
   // Formatta la data
   const formatDate = (dateString) => {
@@ -96,6 +120,109 @@ const ItemDetailPage = () => {
   // Controlla se l'utente è il proprietario dell'item
   const isOwner = user && user._id === (item.user && item.user._id);
 
+  // Correggi la tua funzione handleClaimItem esistente
+
+  // Invece di:
+  // const handleClaimItem = () => {
+  //   setShowClaimModal(true);
+  // };
+
+  // Modifica con questa implementazione che include entrambe le funzionalità:
+  const handleClaimItem = () => {
+    if (!user) {
+      // Se l'utente non è loggato, reindirizza alla pagina di login
+      alert("Per reclamare un oggetto devi prima effettuare l'accesso.");
+      return;
+    }
+    
+    // Popola il form con i dati dell'utente dal contesto auth
+    setClaimFormData({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      message: ''
+    });
+    
+    // Apri il modal con il form
+    setShowClaimModal(true);
+  };
+
+  // Aggiungi questa funzione per gestire i cambiamenti nel form
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setClaimFormData({
+      ...claimFormData,
+      [name]: value
+    });
+  };
+
+  // Aggiungi questa funzione per validare il form
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!claimFormData.firstName.trim()) errors.firstName = "Il nome è richiesto";
+    if (!claimFormData.lastName.trim()) errors.lastName = "Il cognome è richiesto";
+    if (!claimFormData.email.trim()) errors.email = "L'email è richiesta";
+    if (!claimFormData.email.includes('@')) errors.email = "Email non valida";
+    if (!claimFormData.message.trim()) errors.message = "Per favore, inserisci un messaggio per il proprietario";
+    
+    return errors;
+  };
+
+  // Aggiungi questa funzione per gestire l'invio del form
+  const handleSubmitClaim = async (e) => {
+    e.preventDefault();
+    
+    // Validazione
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Log dei dati inviati (per debug)
+      console.log('Invio dati reclamo:', claimFormData);
+      
+      const response = await axios.post(
+        `${API_URL}/items/${item._id}/claim`,
+        claimFormData,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      console.log('Risposta server:', response.data);
+      
+      if (response.data.success) {
+        setShowClaimModal(false);
+        // Invece dell'alert, mostra il componente di successo
+        setShowSuccessPage(true);
+        // Aggiorna l'item per riflettere il nuovo stato
+        fetchItemDetails();
+      } else {
+        alert(response.data.message || 'Si è verificato un errore durante la richiesta.');
+      }
+    } catch (err) {
+      console.error('Errore durante la richiesta di reclamo:', err);
+      alert(err.response?.data?.message || 'Si è verificato un errore. Riprova più tardi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Modifica il return statement per includere il componente ClaimSuccessPage
+  // Aggiungi questa condizione prima del return principale
+  if (showSuccessPage) {
+    return <ClaimSuccessPage id={item._id} />;
+  }
+
+  // Il resto del return statement rimane invariato
   return (
     <Container className="py-5">
       <Row className="mb-4">
@@ -128,8 +255,28 @@ const ItemDetailPage = () => {
               as={Link} 
               to={`/items/edit/${item._id}`} 
               variant="outline-secondary"
+
+              className="me-2"
             >
               Modifica
+            </Button>
+          )}
+          
+          {/* Bottone Reclama - visibile solo per utenti loggati che non sono proprietari e se l'annuncio è aperto */}
+          {user && !isOwner && item.status === 'open' && (
+            <Button 
+              variant={item.type === 'lost' ? 'success' : 'info'}
+              onClick={handleClaimItem}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                  <span className="ms-2">Attendere...</span>
+                </>
+              ) : (
+                item.type === 'lost' ? 'Ho trovato questo oggetto!' : 'Questo oggetto è mio!'
+              )}
             </Button>
           )}
         </Col>
@@ -306,6 +453,124 @@ const ItemDetailPage = () => {
             Chiudi
           </Button>
         </Modal.Footer>
+      </Modal>
+
+      {/* Modal per il form di reclamo */}
+      <Modal 
+        show={showClaimModal} 
+        onHide={() => setShowClaimModal(false)} 
+        size="lg"
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {item.type === 'lost' ? 'Hai trovato questo oggetto?' : 'Questo oggetto è tuo?'}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmitClaim}>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Nome*</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="firstName"
+                    value={claimFormData.firstName}
+                    onChange={handleFormChange}
+                    isInvalid={!!formErrors.firstName}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.firstName}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Cognome*</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="lastName"
+                    value={claimFormData.lastName}
+                    onChange={handleFormChange}
+                    isInvalid={!!formErrors.lastName}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.lastName}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Email*</Form.Label>
+                  <Form.Control
+                    type="email"
+                    name="email"
+                    value={claimFormData.email}
+                    onChange={handleFormChange}
+                    isInvalid={!!formErrors.email}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.email}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Telefono</Form.Label>
+                  <Form.Control
+                    type="tel"
+                    name="phone"
+                    value={claimFormData.phone}
+                    onChange={handleFormChange}
+                    isInvalid={!!formErrors.phone}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.phone}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Messaggio per il proprietario*</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={4}
+                name="message"
+                value={claimFormData.message}
+                onChange={handleFormChange}
+                placeholder={item.type === 'lost' ? 
+                  "Descrivi dove e quando hai trovato questo oggetto..." : 
+                  "Fornisci dettagli che dimostrino che questo oggetto è tuo..."}
+                isInvalid={!!formErrors.message}
+              />
+              <Form.Control.Feedback type="invalid">
+                {formErrors.message}
+              </Form.Control.Feedback>
+            </Form.Group>
+            
+            <div className="d-grid gap-2">
+              <Button 
+                variant="primary" 
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                    <span className="ms-2">Attendere...</span>
+                  </>
+                ) : (
+                  'Invia richiesta'
+                )}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
       </Modal>
     </Container>
   );

@@ -17,7 +17,7 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background-color: rgb(40, 44, 52);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -28,7 +28,7 @@
 }
 
 .App-link {
-  color: #61dafb;
+  color: dodgerblue;
 }
 
 @keyframes App-logo-spin {
@@ -50,37 +50,37 @@ footer {
 
 /* Fixed theme colors */
 body {
-  background-color: #F9F9F9;
-  color: #333333;
+  background-color: whitesmoke;
+  color: rgb(51, 51, 51);
 }
 
 .navbar-custom {
-  background-color: #6C63FF !important;
+  background-color: slateblue !important;
 }
 
 .btn-primary {
-  background-color: #6C63FF !important;
-  border-color: #6C63FF !important;
+  background-color: slateblue !important;
+  border-color: slateblue !important;
 }
 
 .btn-primary:hover {
-  background-color: #5850e6 !important;
-  border-color: #5850e6 !important;
+  background-color: rgb(88, 80, 230) !important;
+  border-color: rgb(88, 80, 230) !important;
 }
 
 .btn-accent {
-  background-color: #FF6584 !important;
-  border-color: #FF6584 !important;
+  background-color: lightcoral !important;
+  border-color: lightcoral !important;
   color: white;
 }
 
 .text-accent {
-  color: #FF6584 !important;
+  color: lightcoral !important;
 }
 
 .card {
-  background-color: #ffffff;
-  border-color: #D6D6D6;
+  background-color: white;
+  border-color: gainsboro;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -91,16 +91,16 @@ body {
 }
 
 .form-control {
-  background-color: #ffffff;
-  border-color: #D6D6D6;
-  color: #333333;
+  background-color: white;
+  border-color: gainsboro;
+  color: rgb(51, 51, 51);
 }
 
 .form-control:focus {
-  background-color: #ffffff;
-  color: #333333;
+  background-color: white;
+  color: rgb(51, 51, 51);
   box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
-  border-color: #6C63FF;
+  border-color: slateblue;
 }
 
 /* Navbar improvements */

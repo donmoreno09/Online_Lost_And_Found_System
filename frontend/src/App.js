@@ -14,6 +14,7 @@ import ItemDetailPage from './pages/ItemDetailPage';
 import EditItemPage from './pages/EditItemPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
+import ClaimSuccessPage from './pages/ClaimSuccessPage';
 
 function App() {
   return (
@@ -27,7 +28,8 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/items/:id" element={<ItemDetailPage />} />
-            
+            {/* Route per la pagina di successo del reclamo */}
+            <Route path="/claim/success/:id" element={<ClaimSuccessPage />} />
             {/* Route protette */}
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<ProfilePage />} />

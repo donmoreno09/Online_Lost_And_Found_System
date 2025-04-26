@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Form, Button, Card } from 'react-bootstrap';
 import ItemCard from '../components/ItemCard';
 import axios from 'axios';
@@ -15,18 +15,20 @@ const HomePage = () => {
     search: ''
   });
 
-  // Fetch items con useCallback per evitare ricreare la funzione ad ogni render
-  const fetchItems = useCallback(async () => {
+  const fetchItems = async () => {
     try {
       setLoading(true);
+      let queryParams = '?';
       
-      // Costruiamo i parametri di query
-      const queryParams = new URLSearchParams();
-      if (filters.type) queryParams.append('type', filters.type);
-      if (filters.category) queryParams.append('category', filters.category);
-      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.type) queryParams += `type=${filters.type}&`;
+      if (filters.category) queryParams += `category=${filters.category}&`;
       
-      const response = await axios.get(`${API_URL}/items?${queryParams}`);
+      // Aggiungi il filtro per lo stato
+      queryParams += 'status=open&';
+      
+      if (filters.search) queryParams += `search=${filters.search}`;
+      
+      const response = await axios.get(`${API_URL}/items${queryParams}`);
       
       if (response.data.success) {
         setItems(response.data.data);
@@ -34,16 +36,16 @@ const HomePage = () => {
         setError('Errore nel caricamento degli oggetti');
       }
     } catch (err) {
-      console.error('Errore nel caricamento degli oggetti:', err);
-      setError('Impossibile caricare gli oggetti. Riprova più tardi.');
+      console.error('Errore caricamento oggetti:', err);
+      setError('Si è verificato un errore nel caricamento degli oggetti');
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  };
 
   useEffect(() => {
     fetchItems();
-  }, [fetchItems]);
+  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
