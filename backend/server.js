@@ -39,7 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
-app.use('/auths', oAuthRoutes); 
+app.use('/api/auths', oAuthRoutes); 
 
 // Connessione al database
 connectDB();
