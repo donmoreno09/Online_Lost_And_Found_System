@@ -4,7 +4,7 @@ import { Container, Alert, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import ClaimSuccessPage from '../pages/ClaimSuccessPage';
 
-// Definisci API_URL qui, come negli altri file
+
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const ClaimRedirectPage = ({ action }) => {
