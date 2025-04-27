@@ -90,7 +90,6 @@ const CreateItemPage = () => {
       // Prepara i dati per l'invio come FormData per supportare i file
       const formDataToSend = new FormData();
       
-      // Aggiungi i campi del form
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
       formDataToSend.append('category', formData.category);
@@ -104,10 +103,7 @@ const CreateItemPage = () => {
         state: formData.state
       };
       
-      // Aggiungi la location come campo separato
       formDataToSend.append('locationJson', JSON.stringify(locationData));
-      
-      // Per retrocompatibilità, aggiungi anche i campi singoli
       formDataToSend.append('address', formData.address);
       formDataToSend.append('city', formData.city);
       formDataToSend.append('state', formData.state);
@@ -119,7 +115,7 @@ const CreateItemPage = () => {
         state: formData.state
       });
       
-      // Aggiungi le immagini
+
       images.forEach(image => {
         formDataToSend.append('images', image);
       });

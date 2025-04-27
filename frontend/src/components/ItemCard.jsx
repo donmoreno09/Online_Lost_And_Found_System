@@ -36,7 +36,6 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
     return categories[category] || category;
   };
 
-  // Aggiungi un badge che mostra lo stato dell'oggetto
   const getStatusBadge = (status, claimStatus) => {
     switch (status) {
       case 'open':

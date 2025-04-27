@@ -56,7 +56,6 @@ router.post('/register', uploadCloudinary.single('avatar'), async (req, res) => 
             phone: phone || null
         };
         
-        // Aggiungi avatar se caricato
         if (req.file) {
             userData.avatar = req.file.path;
         }

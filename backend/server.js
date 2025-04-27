@@ -4,9 +4,9 @@ import cors from 'cors';
 import connectDB from './config/db.js';
 import userRoutes from './routes/users.js';
 import itemRoutes from './routes/items.js';
-import oAuthRoutes from './routes/oauths.js'; // Aggiungi questa importazione
-import googleStrategy from './config/passport.js'; // Aggiungi questa importazione
-import passport from 'passport'; // Aggiungi questa importazione
+import oAuthRoutes from './routes/oauths.js'; 
+import googleStrategy from './config/passport.js'; 
+import passport from 'passport'; 
 
 // Verifica che JWT_SECRET sia impostato
 if (!process.env.JWT_SECRET) {
@@ -29,8 +29,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Configura Passport per Google OAuth
-passport.use(googleStrategy); // Aggiungi questa riga
-app.use(passport.initialize()); // Aggiungi questa riga
+passport.use(googleStrategy); 
+app.use(passport.initialize());
 
 // Middleware
 app.use(express.json());
@@ -39,7 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
-app.use('/auths', oAuthRoutes); // Aggiungi questa riga
+app.use('/auths', oAuthRoutes); 
 
 // Connessione al database
 connectDB();

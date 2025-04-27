@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 
 const ItemSchema = new mongoose.Schema({
-  // Aggiungi il campo user all'inizio dello schema
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

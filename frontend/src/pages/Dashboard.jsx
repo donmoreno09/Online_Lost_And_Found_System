@@ -1,4 +1,4 @@
-// Aggiungi tab per filtrare gli oggetti per stato
+
 <Tabs defaultActiveKey="all" className="mb-3">
   <Tab eventKey="all" title="Tutti">
     <ItemsList items={items} onDeleteItem={handleDeleteItem} />

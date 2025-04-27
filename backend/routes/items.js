@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
       filter.status = { $in: ['available', 'pending'] };
     }
     
-    // Aggiungi filtro per date
+    
     if (dateFrom || dateTo) {
       filter.date = {};
       
@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
       }
     }
     
-    // Aggiungi filtro per location
+  
     if (location) {
       console.log("Filtering by location:", location);
       // Crea una regex case-insensitive per cercare nelle parti di location
@@ -300,8 +300,7 @@ router.post('/', auth, uploadCloudinary.array('images', 5), async (req, res) => 
       user: req.user._id,
       status: 'available'
     });
-    
-    // Aggiungi le immagini se presenti
+
     if (req.files && req.files.length > 0) {
       newItem.images = req.files.map(file => file.path);
     }
@@ -512,7 +511,6 @@ router.put('/:id', auth, uploadCloudinary.array('images', 5), async (req, res) =
     
     // Gestione delle immagini
     if (req.files && req.files.length > 0) {
-      // Aggiungi le nuove immagini alle esistenti
       updateData.images = [...(item.images || []), ...req.files.map(file => file.path)];
     } else if (req.body.images && typeof req.body.images === 'string') {
       // Se images è una stringa, convertila in array
@@ -580,9 +578,6 @@ router.delete('/:id', auth, async (req, res) => {
     });
   }
 });
-
-// Aggiungi questa route per gestire i reclami
-// Inseriscila prima delle route di accettazione/rifiuto
 
 // POST per reclamare un oggetto
 router.post('/:id/claim', auth, async (req, res) => {
