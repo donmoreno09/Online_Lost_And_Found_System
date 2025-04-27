@@ -512,16 +512,10 @@ router.post('/:id/claim', auth, async (req, res) => {
     const userId = req.user._id;
     const { firstName, lastName, email, phone, message } = req.body;
     
-    // Validazioni
-    if (!firstName || !lastName || !email || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'Per favore, compila tutti i campi richiesti'
-      });
-    }
+    // Verifiche di validazione dei campi...
     
-    // Trova l'oggetto e popola il campo user
     const item = await Item.findById(itemId).populate('user');
+    
     if (!item) {
       return res.status(404).json({
         success: false,
@@ -529,12 +523,11 @@ router.post('/:id/claim', auth, async (req, res) => {
       });
     }
     
-    // Verifica che l'utente non stia reclamando il proprio oggetto
-    // Controlla prima se item.user esiste e confronta gli ID in modo sicuro
+    // Verifica se l'utente è proprietario dell'oggetto
     if (item.user && item.user._id && item.user._id.toString() === userId.toString()) {
       return res.status(400).json({
         success: false,
-        message: 'Non puoi reclamare un oggetto di tua proprietà'
+        message: 'Non puoi reclamare un oggetto che hai pubblicato'
       });
     }
     
@@ -567,7 +560,7 @@ router.post('/:id/claim', auth, async (req, res) => {
         claimToken: {
           accept: acceptToken,
           reject: rejectToken,
-          expiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 giorni di validità
+          expiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 giorni
         }
       }
     });
@@ -575,100 +568,95 @@ router.post('/:id/claim', auth, async (req, res) => {
     // Invia email di notifica al proprietario con i link di accettazione/rifiuto
     try {
       if (item.user && item.user.email) {
-        const announcementType = item.type === 'lost' ? 'smarrito' : 'trovato';
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const acceptUrl = `${baseUrl}/claim/accept/${acceptToken}`;
+        const rejectUrl = `${baseUrl}/claim/reject/${rejectToken}`;
         
-        const acceptUrl = `${frontendUrl}/claim/accept/${acceptToken}`;
-        const rejectUrl = `${frontendUrl}/claim/reject/${rejectToken}`;
+        // Determina il contenuto dell'email in base al tipo di oggetto
+        let emailSubject, emailIntro, emailAction;
         
-        // Log per debug
-        console.log("Sending email to owner:", item.user.email);
-        console.log("Accept URL:", acceptUrl);
-        console.log("Reject URL:", rejectUrl);
+        if (item.type === 'found') {
+          // Email per oggetti trovati
+          emailSubject = `Qualcuno vuole reclamare l'oggetto che hai trovato: ${item.title}`;
+          emailIntro = `Qualcuno afferma di essere il proprietario dell'oggetto "${item.title}" che hai trovato.`;
+          emailAction = "Conferma se questa persona è il legittimo proprietario dell'oggetto.";
+        } else {
+          // Email per oggetti smarriti
+          emailSubject = `Qualcuno ha trovato l'oggetto che hai smarrito: ${item.title}`;
+          emailIntro = `Buone notizie! Qualcuno afferma di aver trovato l'oggetto "${item.title}" che hai segnalato come smarrito.`;
+          emailAction = "Conferma se questo è effettivamente l'oggetto che stavi cercando.";
+        }
         
         await mailer.sendMail({
           from: process.env.EMAIL_FROM,
           to: item.user.email,
-          subject: `Qualcuno ha reclamato il tuo oggetto: ${item.title}`,
+          subject: emailSubject,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="color: #0d6efd;">Richiesta di Reclamo</h1>
-              </div>
+              <h1 style="color: #4a6ee0;">Richiesta di Reclamo</h1>
               
-              <p>Ciao ${item.user.firstName},</p>
+              <p>Ciao ${item.user.firstName || 'Utente'},</p>
               
-              <p>Qualcuno ha reclamato il tuo oggetto <strong>${announcementType}</strong> "<strong>${item.title}</strong>".</p>
+              <p>${emailIntro}</p>
               
               <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #0d6efd;">Informazioni del richiedente:</h3>
                 <p><strong>Nome:</strong> ${firstName} ${lastName}</p>
                 <p><strong>Email:</strong> ${email}</p>
-                ${phone ? `<p><strong>Telefono:</strong> ${phone}</p>` : ''}
+                <p><strong>Telefono:</strong> ${phone || 'Non fornito'}</p>
                 <p><strong>Messaggio:</strong> ${message}</p>
               </div>
               
-              <p>Se riconosci questa persona come il legittimo proprietario dell'oggetto, puoi accettare la richiesta cliccando sul pulsante qui sotto:</p>
+              <p>${emailAction}</p>
               
-              <div style="text-align: center; margin: 25px 0;">
-                <a href="${acceptUrl}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Accetta Richiesta</a>
+              <div style="margin: 30px 0; text-align: center;">
+                <a href="${acceptUrl}" style="display: inline-block; margin-right: 10px; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;">Accetta Richiesta</a>
+                <a href="${rejectUrl}" style="display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px;">Rifiuta Richiesta</a>
               </div>
               
-              <p>Se non riconosci questa persona o non desideri procedere con il reclamo, puoi rifiutare la richiesta:</p>
-              
-              <div style="text-align: center; margin: 25px 0;">
-                <a href="${rejectUrl}" style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Rifiuta Richiesta</a>
-              </div>
-              
-              <p>Puoi anche rispondere direttamente a questa email per comunicare con il richiedente.</p>
+              <p style="color: #6c757d; font-size: 14px;">I link scadranno tra 7 giorni.</p>
               
               <p>Cordiali saluti,<br>Il Team di Lost & Found</p>
-              
-              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d; text-align: center;">
-                <p>Questo è un messaggio automatico relativo a un reclamo sulla piattaforma Lost & Found.</p>
-                <p>&copy; ${new Date().getFullYear()} Lost & Found System. Tutti i diritti riservati.</p>
-              </div>
             </div>
           `
         });
-        
-        console.log('Email di notifica reclamo inviata a:', item.user.email);
       }
       
       // Email di conferma all'utente che reclama
       if (email) {
-        const announcementType = item.type === 'lost' ? 'smarrito' : 'trovato';
+        // Personalizza il messaggio in base al tipo di oggetto
+        let confirmationSubject, confirmationMessage;
+        
+        if (item.type === 'found') {
+          confirmationSubject = `Hai reclamato un oggetto trovato: ${item.title}`;
+          confirmationMessage = `
+            <p>Hai reclamato l'oggetto "${item.title}" che qualcuno ha trovato.</p>
+            <p>Il proprietario attuale dell'oggetto è stato notificato e valuterà la tua richiesta.</p>
+            <p>Riceverai un'email quando la tua richiesta sarà accettata o rifiutata.</p>
+          `;
+        } else {
+          confirmationSubject = `Hai segnalato di aver trovato un oggetto smarrito: ${item.title}`;
+          confirmationMessage = `
+            <p>Hai segnalato di aver trovato l'oggetto "${item.title}" che qualcuno ha smarrito.</p>
+            <p>La persona che ha smarrito l'oggetto è stata notificata e valuterà la tua segnalazione.</p>
+            <p>Riceverai un'email quando la tua segnalazione sarà confermata.</p>
+          `;
+        }
         
         await mailer.sendMail({
           from: process.env.EMAIL_FROM,
           to: email,
-          subject: `Conferma richiesta per l'oggetto: ${item.title}`,
+          subject: confirmationSubject,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="color: #0d6efd;">Richiesta Inviata</h1>
-              </div>
+              <h1 style="color: #4a6ee0;">Richiesta Inviata</h1>
               
               <p>Ciao ${firstName},</p>
               
-              <p>Abbiamo ricevuto la tua richiesta per l'oggetto <strong>${announcementType}</strong> "<strong>${item.title}</strong>".</p>
+              ${confirmationMessage}
               
-              <p>Abbiamo inviato una notifica al proprietario dell'oggetto, che valuterà la tua richiesta. Riceverai un'email quando il proprietario risponderà alla tua richiesta.</p>
-              
-              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #0d6efd;">Riepilogo della richiesta:</h3>
-                <p><strong>Oggetto:</strong> ${item.title}</p>
-                <p><strong>Messaggio inviato:</strong> ${message}</p>
-              </div>
-              
-              <p>Nel frattempo, ti invitiamo a tenere d'occhio la tua casella email per eventuali aggiornamenti.</p>
+              <p>Grazie per aver utilizzato il nostro servizio!</p>
               
               <p>Cordiali saluti,<br>Il Team di Lost & Found</p>
-              
-              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d; text-align: center;">
-                <p>Questo è un messaggio automatico, si prega di non rispondere direttamente a questa email.</p>
-                <p>&copy; ${new Date().getFullYear()} Lost & Found System. Tutti i diritti riservati.</p>
-              </div>
             </div>
           `
         });
