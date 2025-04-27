@@ -24,7 +24,7 @@ const HomePage = () => {
       if (filters.category) queryParams += `category=${filters.category}&`;
       
       // Aggiungi il filtro per lo stato
-      queryParams += 'status=open&';
+      queryParams += 'status=available&';
       
       if (filters.search) queryParams += `search=${filters.search}`;
       

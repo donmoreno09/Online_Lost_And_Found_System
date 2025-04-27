@@ -24,27 +24,36 @@ const auth = async (req, res, next) => {
     // Verifica la firma del token
     jwt.verify(token, process.env.JWT_SECRET, async (err, payload) => {
       if (err) {
+        console.error('Token verification error:', err.name, err.message);
         return res.status(401).json({ 
           success: false, 
-          message: 'Token non valido' 
+          message: 'Token non valido o scaduto'
         });
       }
       
-      // Recupera i dati dell'utente dal database
-      const user = await User.findById(payload.userId).select('-password');
-      
-      if (!user) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Utente non trovato' 
+      try {
+        // Recupera i dati dell'utente dal database
+        const user = await User.findById(payload.userId).select('-password');
+        
+        if (!user) {
+          return res.status(401).json({ 
+            success: false, 
+            message: 'Utente non trovato' 
+          });
+        }
+        
+        // Aggiungiamo l'utente alla request per i middleware successivi
+        req.user = user;
+        
+        // Passa al prossimo middleware
+        next();
+      } catch (error) {
+        console.error('User lookup error:', error);
+        return res.status(401).json({
+          success: false,
+          message: 'Errore di autenticazione'
         });
       }
-      
-      // Aggiungiamo l'utente alla request per i middleware successivi
-      req.user = user;
-      
-      // Passa al prossimo middleware
-      next();
     });
   } catch (error) {
     console.error('Errore di autenticazione:', error);

@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 
-const itemSchema = new mongoose.Schema({
+const ItemSchema = new mongoose.Schema({
+  // Aggiungi il campo user all'inizio dello schema
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   title: {
     type: String,
     required: [true, 'Please provide a title'],
@@ -44,21 +50,16 @@ const itemSchema = new mongoose.Schema({
   images: [String],
   status: {
     type: String,
-    enum: ['open', 'claimed', 'resolved', 'expired'],
-    default: 'open'
+    enum: ['available', 'pending', 'claimed', 'rejected'],
+    default: 'available'
   },
-  user: {
-    type: mongoose.Schema.ObjectId,
-    ref: 'User',
-    required: [true, 'An item must belong to a user']
-  },
-  // Aggiungi questi campi allo schema se non sono già presenti
-
-  claimedBy: {
+  
+  claimant: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
   },
+  
   claimInfo: {
     firstName: String,
     lastName: String,
@@ -84,6 +85,5 @@ const itemSchema = new mongoose.Schema({
   timestamps: true
 });
 
-const Item = mongoose.model('Item', itemSchema);
-
+const Item = mongoose.model('Item', ItemSchema);
 export default Item;

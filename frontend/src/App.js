@@ -15,6 +15,8 @@ import EditItemPage from './pages/EditItemPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from './components/Footer';
 import ClaimSuccessPage from './pages/ClaimSuccessPage';
+import ClaimAcceptedPage from './pages/ClaimAcceptedPage';
+import ClaimRefusedPage from './pages/ClaimRefusedPage';
 
 function App() {
   return (
@@ -28,8 +30,12 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/items/:id" element={<ItemDetailPage />} />
-            {/* Route per la pagina di successo del reclamo */}
+            
+            {/* Route per le pagine di reclamo */}
             <Route path="/claim/success/:id" element={<ClaimSuccessPage />} />
+            <Route path="/claim/accept/:token" element={<ClaimAcceptedPage />} />
+            <Route path="/claim/reject/:token" element={<ClaimRefusedPage />} />
+            
             {/* Route protette */}
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<ProfilePage />} />

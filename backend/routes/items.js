@@ -4,8 +4,8 @@ import Item from '../models/Item.js';
 import User from '../models/User.js';
 import mailer from '../helpers/mailer.js';
 import auth from '../middlewares/auth.js';
-import uploadCloudinary from '../middlewares/uploadCloudinary.js';
 import crypto from 'crypto';
+import uploadCloudinary from '../middlewares/uploadCloudinary.js';
 
 const router = express.Router();
 
@@ -31,11 +31,14 @@ router.get('/', async (req, res) => {
     
     console.log("Filter:", filter);
     
-    // Aggiungi il filtro per mostrare solo gli oggetti con stato "open"
-    const query = { ...filter, status: 'open' };
+    // Modifica la query per includere sia "available" che "pending"
+    const query = { 
+      ...filter, 
+      status: { $in: ['available', 'pending'] }  // Mostra sia gli oggetti disponibili che quelli in attesa
+    };
     
     const items = await Item.find(query)
-      .populate('user', 'firstName lastName')
+      .populate('user', 'firstName lastName email phone')
       .sort({ createdAt: -1 });
       
     console.log(`Found ${items.length} items`);
@@ -61,11 +64,13 @@ router.get('/my-items', auth, async (req, res) => {
     const query = { user: req.user._id };
     
     // Applica filtro per stato se specificato
-    if (status && ['open', 'claimed', 'resolved', 'expired'].includes(status)) {
+    if (status && ['available', 'pending', 'claimed', 'rejected'].includes(status)) {
       query.status = status;
     }
     
-    const items = await Item.find(query).sort({ createdAt: -1 });
+    const items = await Item.find(query)
+      .populate('user', 'firstName lastName email phone')  // Aggiungi populate
+      .sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,
@@ -91,23 +96,70 @@ router.get('/:id', async (req, res) => {
       });
     }
     
-    const item = await Item.findById(req.params.id)
-      .populate('user', 'firstName lastName email phone');  // Aggiunto "phone" qui
-    
-    if (!item) {
-      return res.status(404).json({
+    try {
+      console.log("Fetching item details for ID:", req.params.id);
+      
+      // Recupera l'item prima per verificare se esiste
+      const item = await Item.findById(req.params.id)
+        .populate('user', 'firstName lastName email phone');
+      
+      if (!item) {
+        return res.status(404).json({
+          success: false,
+          message: 'Item not found'
+        });
+      }
+      
+      console.log("Item found, user ID:", item.user);
+      
+      // Verifica che l'ID utente sia valido
+      if (!item.user || !mongoose.Types.ObjectId.isValid(item.user)) {
+        console.log("Invalid user ID in item");
+        
+        // Restituisci l'item senza tentare di popolare l'utente
+        return res.status(200).json({
+          success: true,
+          data: item
+        });
+      }
+      
+      // Verifica che l'utente esista veramente
+      const userExists = await mongoose.model('User').findById(item.user);
+      
+      if (!userExists) {
+        console.log("User not found in database, returning item without user");
+        
+        // Restituisci l'item senza utente
+        return res.status(200).json({
+          success: true,
+          data: item
+        });
+      }
+      
+      // Se l'utente esiste, recupera l'item con popolazione
+      const populatedItem = await Item.findById(req.params.id)
+        .populate({
+          path: 'user',
+          select: 'firstName lastName email phone',
+          options: { strictPopulate: false }
+        });
+      
+      console.log("User populated:", populatedItem.user ? "yes" : "no");
+      
+      res.status(200).json({
+        success: true,
+        data: populatedItem
+      });
+    } catch (queryError) {
+      console.error("Query error:", queryError);
+      return res.status(400).json({
         success: false,
-        message: 'Item not found'
+        message: 'Errore di query: ' + queryError.message
       });
     }
-    
-    res.status(200).json({
-      success: true,
-      data: item
-    });
   } catch (error) {
     console.error("Error in GET /items/:id:", error);
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       message: error.message
     });
@@ -167,7 +219,7 @@ router.post('/', auth, uploadCloudinary.array('images', 5), async (req, res) => 
       date: date || new Date(),
       location: locationData, // Ora locationData è correttamente strutturato
       user: req.user._id,
-      status: 'open'
+      status: 'available'
     });
     
     // Aggiungi le immagini se presenti
@@ -464,11 +516,11 @@ router.post('/:id/claim', auth, async (req, res) => {
     if (!firstName || !lastName || !email || !message) {
       return res.status(400).json({
         success: false,
-        message: 'Mancano alcuni campi obbligatori'
+        message: 'Per favore, compila tutti i campi richiesti'
       });
     }
     
-    // Trova l'oggetto
+    // Trova l'oggetto e popola il campo user
     const item = await Item.findById(itemId).populate('user');
     if (!item) {
       return res.status(404).json({
@@ -478,15 +530,16 @@ router.post('/:id/claim', auth, async (req, res) => {
     }
     
     // Verifica che l'utente non stia reclamando il proprio oggetto
-    if (item.user._id.toString() === userId.toString()) {
+    // Controlla prima se item.user esiste e confronta gli ID in modo sicuro
+    if (item.user && item.user._id && item.user._id.toString() === userId.toString()) {
       return res.status(400).json({
         success: false,
         message: 'Non puoi reclamare un oggetto di tua proprietà'
       });
     }
     
-    // Verifica che l'oggetto sia ancora in stato "open"
-    if (item.status !== 'open') {
+    // Verifica che l'oggetto sia ancora in stato "available"
+    if (item.status !== 'available') {
       return res.status(400).json({
         success: false,
         message: 'Questo oggetto non è più disponibile per essere reclamato'
@@ -497,34 +550,29 @@ router.post('/:id/claim', auth, async (req, res) => {
     const acceptToken = crypto.randomBytes(32).toString('hex');
     const rejectToken = crypto.randomBytes(32).toString('hex');
     
-    // Aggiorna lo stato dell'oggetto e salva i token
-    item.status = 'claimed';     // Cambia lo stato generale dell'oggetto a "claimed"
-    item.claimedBy = userId;
-    item.claimInfo = {
-      firstName,
-      lastName,
-      email,
-      phone: phone || '',
-      message,
-      date: new Date()
-    };
-    item.claimStatus = 'pending';  // Imposta lo stato del reclamo a "pending"
+    // Aggiorna l'oggetto con i dati del reclamo
+    await Item.updateOne({ _id: itemId }, {
+      $set: {
+        status: 'pending',
+        claimStatus: 'pending',
+        claimant: userId,
+        claimInfo: {
+          firstName,
+          lastName,
+          email,
+          phone: phone || '',
+          message,
+          date: new Date()
+        },
+        claimToken: {
+          accept: acceptToken,
+          reject: rejectToken,
+          expiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 giorni di validità
+        }
+      }
+    });
     
-    // Aggiungi i token al documento
-    if (!item.claimToken) {
-      item.claimToken = {};
-    }
-    
-    item.claimToken = {
-      accept: acceptToken,
-      reject: rejectToken,
-      expiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 giorni di validità
-    };
-    
-    await item.save();
-    console.log("Item updated with claim information");
-    
-    // Invia email di notifica al proprietario dell'oggetto
+    // Invia email di notifica al proprietario con i link di accettazione/rifiuto
     try {
       if (item.user && item.user.email) {
         const announcementType = item.type === 'lost' ? 'smarrito' : 'trovato';
@@ -632,14 +680,10 @@ router.post('/:id/claim', auth, async (req, res) => {
       // Non blocchiamo l'operazione se l'invio dell'email fallisce
     }
     
+    // Invia risposta
     res.status(200).json({
       success: true,
-      message: 'Richiesta inviata con successo',
-      data: {
-        itemId: item._id,
-        status: item.status,
-        claimStatus: item.claimStatus
-      }
+      message: 'Richiesta inviata con successo'
     });
     
   } catch (error) {
@@ -651,51 +695,51 @@ router.post('/:id/claim', auth, async (req, res) => {
   }
 });
 
-// Modifica alle route di accettazione e rifiuto
-
-// GET per accettare un reclamo (via token)
-router.get('/claim/accept/:token', async (req, res) => {
+// Route per accettare la richiesta di reclamo
+router.put('/claim/accept/:token', async (req, res) => {
   try {
     const token = req.params.token;
+    console.log("Accettazione richiesta, token:", token);
     
-    // Recupera l'oggetto associato al token
-    const itemId = await getItemIdFromToken(token);
+    // Cerca l'oggetto associato a questo token di accettazione
+    const item = await Item.findOne({
+      'claimToken.accept': token
+    }).populate('user').populate('claimant');
     
-    if (!itemId) {
+    if (!item) {
       return res.status(400).json({
         success: false,
         message: 'Token non valido o scaduto'
       });
     }
     
-    const item = await Item.findById(itemId)
-      .populate('user')
-      .populate('claimedBy');
-      
-    if (!item) {
-      return res.status(404).json({
+    // Verifica che il token non sia scaduto
+    if (item.claimToken.expiry && new Date(item.claimToken.expiry) < new Date()) {
+      return res.status(400).json({
         success: false,
-        message: 'Oggetto non trovato'
+        message: 'Token scaduto, genera una nuova richiesta'
       });
     }
     
-    // Aggiorna lo stato dell'oggetto
-    item.status = 'resolved';       // Cambia lo stato generale a "resolved"
-    item.claimStatus = 'accepted';  // Cambia lo stato del reclamo a "accepted"
+    console.log("Item trovato:", item.title);
+    
+    // Cambio stato dell'item
+    item.status = 'claimed';
+    item.claimStatus = 'accepted';
     await item.save();
     
-    // Invia email di notifica all'utente che ha reclamato l'oggetto
+    console.log("Stato aggiornato a:", item.status, item.claimStatus);
+    
+    // Invia email al reclamante
     if (item.claimInfo && item.claimInfo.email) {
-      const claimerEmail = item.claimInfo.email;
-      const claimerName = item.claimInfo.firstName;
-      const ownerName = item.user.firstName + ' ' + item.user.lastName;
-      const ownerEmail = item.user.email;
-      const ownerPhone = item.user.phone || 'Non disponibile';
-      
       try {
+        const ownerName = item.user ? `${item.user.firstName} ${item.user.lastName}` : 'Il proprietario';
+        const ownerEmail = item.user ? item.user.email : 'Non disponibile';
+        const ownerPhone = item.user ? item.user.phone || 'Non disponibile' : 'Non disponibile';
+        
         await mailer.sendMail({
           from: process.env.EMAIL_FROM,
-          to: claimerEmail,
+          to: item.claimInfo.email,
           subject: `Richiesta accettata per: ${item.title}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
@@ -703,12 +747,13 @@ router.get('/claim/accept/:token', async (req, res) => {
                 <h1 style="color: #28a745;">Richiesta Accettata!</h1>
               </div>
               
-              <p>Ciao ${claimerName},</p>
+              <p>Ciao ${item.claimInfo.firstName},</p>
               
-              <p>Buone notizie! ${ownerName} ha accettato la tua richiesta per l'oggetto "<strong>${item.title}</strong>".</p>
+              <p>Siamo lieti di informarti che la tua richiesta per l'oggetto "<strong>${item.title}</strong>" è stata accettata.</p>
+              
+              <p>Puoi metterti in contatto con il proprietario utilizzando i seguenti dettagli:</p>
               
               <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #28a745;">Informazioni di contatto del proprietario:</h3>
                 <p><strong>Nome:</strong> ${ownerName}</p>
                 <p><strong>Email:</strong> ${ownerEmail}</p>
                 <p><strong>Telefono:</strong> ${ownerPhone}</p>
@@ -717,64 +762,66 @@ router.get('/claim/accept/:token', async (req, res) => {
               <p>Ti consigliamo di contattare il proprietario al più presto per organizzare la restituzione dell'oggetto.</p>
               
               <p>Cordiali saluti,<br>Il Team di Lost & Found</p>
-              
-              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d; text-align: center;">
-                <p>Questo è un messaggio automatico relativo a un reclamo accettato sulla piattaforma Lost & Found.</p>
-                <p>&copy; ${new Date().getFullYear()} Lost & Found System. Tutti i diritti riservati.</p>
-              </div>
             </div>
           `
         });
         
-        console.log('Email di accettazione inviata a:', claimerEmail);
+        console.log("Email inviata a:", item.claimInfo.email);
       } catch (emailError) {
-        console.error('Errore nell\'invio dell\'email di accettazione:', emailError);
+        console.error("Errore email:", emailError);
       }
     }
     
-    // Reindirizza alla pagina di successo nel frontend
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/claim/accept/${token}`);
-    
+    return res.status(200).json({
+      success: true,
+      message: 'Richiesta accettata con successo',
+      item: {
+        _id: item._id,
+        title: item.title
+      }
+    });
   } catch (error) {
-    console.error("Error accepting claim:", error);
-    res.status(500).json({
+    console.error("Errore:", error);
+    return res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Errore del server'
     });
   }
 });
 
-// GET per rifiutare un reclamo (via token)
-router.get('/claim/reject/:token', async (req, res) => {
+// Route per rifiutare la richiesta di reclamo
+router.put('/claim/reject/:token', async (req, res) => {
   try {
     const token = req.params.token;
+    console.log("Richiesta di rifiuto, token:", token);
     
-    // Recupera l'oggetto associato al token di rifiuto
-    const itemId = await getItemIdFromRejectToken(token);
+    // Cerca l'oggetto associato a questo token di rifiuto
+    const item = await Item.findOne({
+      'claimToken.reject': token
+    });
     
-    if (!itemId) {
+    if (!item) {
       return res.status(400).json({
         success: false,
         message: 'Token non valido o scaduto'
       });
     }
     
-    const item = await Item.findById(itemId);
-    if (!item) {
-      return res.status(404).json({
+    // Verifica che il token non sia scaduto
+    if (item.claimToken.expiry && new Date(item.claimToken.expiry) < new Date()) {
+      return res.status(400).json({
         success: false,
-        message: 'Oggetto non trovato'
+        message: 'Token scaduto'
       });
     }
     
-    // Ripristina lo stato dell'oggetto a "open"
-    item.status = 'open';           // Ripristina lo stato generale a "open"
-    item.claimStatus = 'rejected';  // Cambia lo stato del reclamo a "rejected"
-    item.claimedBy = null;          // Rimuovi il riferimento all'utente che l'ha reclamato
+    // 1. CAMBIO STATO DELL'OGGETTO
+    item.status = 'available';      // Riporta lo stato a "available" (Disponibile)
+    item.claimStatus = 'rejected';  // Aggiorna lo stato del reclamo
+    
     await item.save();
     
-    // Invia email di notifica all'utente che ha reclamato l'oggetto
+    // 2. INVIO EMAIL ALLA PERSONA CHE HA FATTO IL RECLAMO
     if (item.claimInfo && item.claimInfo.email) {
       try {
         await mailer.sendMail({
@@ -796,30 +843,26 @@ router.get('/claim/reject/:token', async (req, res) => {
               <p>Se ritieni ci sia stato un errore, puoi provare a contattare l'amministratore del sistema o effettuare una nuova richiesta con maggiori dettagli.</p>
               
               <p>Cordiali saluti,<br>Il Team di Lost & Found</p>
-              
-              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d; text-align: center;">
-                <p>Questo è un messaggio automatico relativo a un reclamo sulla piattaforma Lost & Found.</p>
-                <p>&copy; ${new Date().getFullYear()} Lost & Found System. Tutti i diritti riservati.</p>
-              </div>
             </div>
           `
         });
         
         console.log('Email di rifiuto inviata a:', item.claimInfo.email);
       } catch (emailError) {
-        console.error('Errore nell\'invio dell\'email di rifiuto:', emailError);
+        console.error('Errore invio email:', emailError);
       }
     }
     
-    // Reindirizza a una pagina di conferma
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/claim/reject/${token}`);
+    res.status(200).json({
+      success: true,
+      message: 'Richiesta rifiutata con successo'
+    });
     
   } catch (error) {
-    console.error("Error rejecting claim:", error);
+    console.error("Errore nel rifiuto del reclamo:", error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Si è verificato un errore durante l\'elaborazione della richiesta'
     });
   }
 });

@@ -263,7 +263,7 @@ const ItemDetailPage = () => {
           )}
           
           {/* Bottone Reclama - visibile solo per utenti loggati che non sono proprietari e se l'annuncio è aperto */}
-          {user && !isOwner && item.status === 'open' && (
+          {user && !isOwner && item.status === 'available' && (
             <Button 
               variant={item.type === 'lost' ? 'success' : 'info'}
               onClick={handleClaimItem}
@@ -384,10 +384,10 @@ const ItemDetailPage = () => {
           <Card className="mb-4">
             <Card.Body>
               <h5>Informazioni di contatto</h5>
-              {item.user && (
+              {item.user ? (
                 <>
                   <p className="mb-2">
-                    <strong>Nome:</strong> {item.user.firstName} {item.user.lastName}
+                    <strong>Nome:</strong> {item.user.firstName || ''} {item.user.lastName || ''}
                   </p>
                   
                   {item.user.email && (
@@ -402,8 +402,7 @@ const ItemDetailPage = () => {
                     </p>
                   )}
                 </>
-              )}
-              {(!item.user || (!item.user.email && !item.user.phone)) && (
+              ) : (
                 <p className="text-muted mb-0">Informazioni di contatto non disponibili</p>
               )}
             </Card.Body>
@@ -414,14 +413,16 @@ const ItemDetailPage = () => {
             <Card.Body>
               <h5>Stato</h5>
               <Badge 
-                bg={item.status === 'open' ? 'info' : 
-                    item.status === 'claimed' ? 'warning' : 
-                    item.status === 'resolved' ? 'success' : 'secondary'}
+                bg={item.status === 'available' ? 'info' : 
+                    item.status === 'pending' ? 'warning' : 
+                    item.status === 'claimed' ? 'success' : 
+                    item.status === 'rejected' ? 'danger' : 'secondary'}
                 className="p-2"
               >
-                {item.status === 'open' ? 'Aperto' : 
-                 item.status === 'claimed' ? 'Reclamato' : 
-                 item.status === 'resolved' ? 'Risolto' : 'Scaduto'}
+                {item.status === 'available' ? 'Disponibile' : 
+                 item.status === 'pending' ? 'Reclamato da qualcuno' : 
+                 item.status === 'claimed' ? 'Restituito' : 
+                 item.status === 'rejected' ? 'Reclamo rifiutato' : 'Sconosciuto'}
               </Badge>
             </Card.Body>
           </Card>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -17,12 +17,14 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const [error, setError] = useState(null);
 
   // Carica i dati dell'utente all'avvio
   useEffect(() => {
     const loadUser = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
+        setUser(null);
         setLoading(false);
         return;
       }
@@ -32,12 +34,15 @@ export const AuthProvider = ({ children }) => {
         if (res.data.success) {
           setUser(res.data.data);
         } else {
-          // Token scaduto o non valido
+          // Token is invalid
           localStorage.removeItem('token');
+          setUser(null);
         }
       } catch (err) {
-        console.error('Errore caricamento utente:', err);
+        console.error('Error loading user:', err);
+        // If there's any error (including 401 unauthorized), clear the token
         localStorage.removeItem('token');
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -47,7 +52,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Funzione per recuperare le notifiche dell'utente
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (user) {
       try {
         const response = await axios.get(`${API_URL}/users/notifications`, {
@@ -61,12 +66,12 @@ export const AuthProvider = ({ children }) => {
         console.error("Error fetching notifications:", error);
       }
     }
-  };
+  }, [user]); // Dipendenza da user
 
-  // Aggiorna le notifiche quando l'utente cambia
+  // Ora aggiorna l'useEffect
   useEffect(() => {
     fetchNotifications();
-  }, [user]);
+  }, [fetchNotifications]); // Ora è sicuro includere fetchNotifications
 
   const login = async (credentials) => {
     try {
@@ -189,7 +194,8 @@ export const AuthProvider = ({ children }) => {
       logout,
       updateProfile,
       notifications,
-      fetchNotifications // Per aggiornare manualmente le notifiche
+      fetchNotifications,
+      isAuthenticated  // Make sure this is included
     }}>
       {children}
     </AuthContext.Provider>

@@ -42,7 +42,7 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
       case 'open':
         return <Badge bg="success">Disponibile</Badge>;
       case 'claimed':
-        return <Badge bg="warning">Reclamato {claimStatus === 'pending' ? '(in attesa)' : ''}</Badge>;
+        return <Badge bg="warning">Reclamato {claimStatus === 'pending' ? '(Reclamato da qualcuno)' : ''}</Badge>;
       case 'resolved':
         return <Badge bg="info">Risolto</Badge>;
       case 'expired':
