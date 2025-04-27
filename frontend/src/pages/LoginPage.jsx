@@ -1,105 +1,141 @@
 import React, { useState } from 'react';
-import { Container, Row, Col, Form, Button, Alert, Card } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import { Container, Row, Col, Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const LoginPage = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  const navigate = useNavigate();
-  const { login } = useAuth();
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
     });
-  };
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    
-    try {
-      const result = await login(formData);
-      
-      if (result.success) {
-        navigate('/'); // Redirect to home page after login
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError('Failed to log in. Please check your credentials.');
-      console.error('Login error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const { login } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-  return (
-    <Container className="py-5">
-      <Row className="justify-content-center">
-        <Col md={6}>
-          <Card className="shadow">
-            <Card.Body className="p-4">
-              <h2 className="text-center mb-4">Login</h2>
-              
-              {error && <Alert variant="danger">{error}</Alert>}
-              
-              <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Email</Form.Label>
-                  <Form.Control
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter your email"
-                  />
-                </Form.Group>
-                
-                <Form.Group className="mb-4">
-                  <Form.Label>Password</Form.Label>
-                  <Form.Control
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter your password"
-                  />
-                </Form.Group>
-                
-                <div className="d-grid">
-                  <Button 
-                    type="submit" 
-                    variant="primary" 
-                    disabled={loading}
-                  >
-                    {loading ? 'Logging in...' : 'Login'}
-                  </Button>
-                </div>
-              </Form>
-              
-              <div className="text-center mt-3">
-                <p className="mb-0">
-                  Don't have an account? <Link to="/register">Register here</Link>
-                </p>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
-  );
+    // Controlla se c'è un token nell'URL (da Google OAuth)
+    React.useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const token = params.get('token');
+        
+        if (token) {
+            // Salva il token e naviga alla home
+            localStorage.setItem('token', token);
+            window.location.href = '/'; // Reload completo per aggiornare lo stato dell'autenticazione
+        }
+    }, [location]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({
+            ...formData,
+            [name]: value
+        });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        
+        if (!formData.email || !formData.password) {
+            setError('Inserisci email e password');
+            return;
+        }
+        
+        try {
+            setLoading(true);
+            const result = await login(formData);
+            
+            if (result.success) {
+                navigate('/');
+            } else {
+                setError(result.error || 'Login fallito');
+            }
+        } catch (err) {
+            console.error('Errore durante il login:', err);
+            setError('Si è verificato un errore durante il login');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = () => {
+        window.location.href = `${API_URL}/auths/login-google`;
+    };
+
+    return (
+        <Container className="py-5">
+            <Row className="justify-content-center">
+                <Col md={6}>
+                    <Card>
+                        <Card.Body>
+                            <Card.Title className="text-center mb-4">Accedi</Card.Title>
+                            
+                            {error && <Alert variant="danger">{error}</Alert>}
+                            
+                            <Form onSubmit={handleSubmit}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Email</Form.Label>
+                                    <Form.Control
+                                        type="email"
+                                        name="email"
+                                        placeholder="Inserisci la tua email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </Form.Group>
+                                
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Password</Form.Label>
+                                    <Form.Control
+                                        type="password"
+                                        name="password"
+                                        placeholder="Inserisci la tua password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </Form.Group>
+                                
+                                <Button 
+                                    variant="primary" 
+                                    type="submit" 
+                                    className="w-100 mb-3" 
+                                    disabled={loading}
+                                >
+                                    {loading ? <Spinner animation="border" size="sm" /> : 'Accedi'}
+                                </Button>
+                            </Form>
+                            
+                            <div className="text-center my-3">
+                                <span>oppure</span>
+                            </div>
+                            
+                            <Button 
+                                variant="danger" 
+                                className="w-100"
+                                onClick={handleGoogleLogin}
+                            >
+                                Accedi con Google
+                            </Button>
+                            
+                            <div className="text-center mt-3">
+                                <p>
+                                    Non hai un account?{' '}
+                                    <Link to="/register">Registrati</Link>
+                                </p>
+                            </div>
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
+        </Container>
+    );
 };
 
 export default LoginPage;

@@ -22,34 +22,38 @@ export const AuthProvider = ({ children }) => {
   // Carica i dati dell'utente all'avvio
   useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await axios.get(`${API_URL}/users/me`);
-        if (res.data.success) {
-          setUser(res.data.data);
-        } else {
-          // Token is invalid
-          localStorage.removeItem('token');
-          setUser(null);
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setUser(null);
+            setLoading(false);
+            return;
         }
-      } catch (err) {
-        console.error('Error loading user:', err);
-        // If there's any error (including 401 unauthorized), clear the token
-        localStorage.removeItem('token');
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
+
+        try {
+            const res = await axios.get(`${API_URL}/users/me`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            
+            if (res.data.success) {
+                setUser(res.data.data);
+            } else {
+                // Token non valido
+                localStorage.removeItem('token');
+                setUser(null);
+            }
+        } catch (err) {
+            console.error('Errore caricamento utente:', err);
+            localStorage.removeItem('token');
+            setUser(null);
+        } finally {
+            setLoading(false);
+        }
     };
 
     loadUser();
-  }, []);
+}, []);
 
   // Funzione per recuperare le notifiche dell'utente
   const fetchNotifications = useCallback(async () => {
