@@ -17,6 +17,11 @@ router.get('/', async (req, res) => {
     console.log("GET /items route hit");
     const { type, category, status, search, dateFrom, dateTo, location } = req.query;
     
+    // Parametri di paginazione
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+    const skip = (page - 1) * limit;
+    
     // Build filter object
     const filter = {};
     if (type) filter.type = type;
@@ -86,16 +91,25 @@ router.get('/', async (req, res) => {
     
     console.log("Final filter:", JSON.stringify(filter, null, 2));
     
+    // Calcola il numero totale di elementi in base al filtro
+    const totalItems = await Item.countDocuments(filter);
+    const totalPages = Math.ceil(totalItems / limit);
+    
     // Non sovrascrivere più il filtro di stato
     const items = await Item.find(filter)
       .populate('user', 'firstName lastName email phone')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
       
-    console.log(`Found ${items.length} items`);
+    console.log(`Found ${items.length} items, page ${page} of ${totalPages}`);
       
     res.status(200).json({
       success: true,
       count: items.length,
+      currentPage: page,
+      totalPages,
+      totalItems,
       data: items
     });
   } catch (error) {
@@ -108,23 +122,38 @@ router.get('/', async (req, res) => {
 });
 
 // GET user items
+// Modifica la route GET user items per supportare la paginazione
 router.get('/my-items', auth, async (req, res) => {
   try {
     const { status } = req.query;
     const query = { user: req.user._id };
+    
+    // Parametri di paginazione
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+    const skip = (page - 1) * limit;
     
     // Applica filtro per stato se specificato
     if (status && ['available', 'pending', 'claimed', 'rejected'].includes(status)) {
       query.status = status;
     }
     
+    // Calcola il numero totale di elementi dell'utente
+    const totalItems = await Item.countDocuments(query);
+    const totalPages = Math.ceil(totalItems / limit);
+    
     const items = await Item.find(query)
-      .populate('user', 'firstName lastName email phone')  // Aggiungi populate
-      .sort({ createdAt: -1 });
+      .populate('user', 'firstName lastName email phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
     
     res.status(200).json({
       success: true,
       count: items.length,
+      currentPage: page,
+      totalPages,
+      totalItems,
       data: items
     });
   } catch (error) {

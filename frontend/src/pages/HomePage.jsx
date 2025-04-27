@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Form, Button, Card } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Card, Pagination } from 'react-bootstrap';
 import ItemCard from '../components/ItemCard';
 import axios from 'axios';
 
@@ -9,6 +9,8 @@ const HomePage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [filters, setFilters] = useState({
     type: '',
     category: '',
@@ -28,30 +30,34 @@ const HomePage = () => {
       
       // Aggiungi i nuovi filtri di data e posizione con log
       if (filters.dateFrom) {
-        console.log("Data inizio:", filters.dateFrom); // Log dettagliato
+        console.log("Data inizio:", filters.dateFrom);
         queryParams += `dateFrom=${encodeURIComponent(filters.dateFrom)}&`;
       }
       if (filters.dateTo) {
-        console.log("Data fine:", filters.dateTo); // Log dettagliato
+        console.log("Data fine:", filters.dateTo);
         queryParams += `dateTo=${encodeURIComponent(filters.dateTo)}&`;
       }
       if (filters.location) {
-        console.log("Posizione cercata:", filters.location); // Log dettagliato
+        console.log("Posizione cercata:", filters.location);
         queryParams += `location=${encodeURIComponent(filters.location)}&`;
       }
       
       // Aggiungi il filtro per lo stato
       queryParams += 'status=available&';
       
-      if (filters.search) queryParams += `search=${encodeURIComponent(filters.search)}`;
+      if (filters.search) queryParams += `search=${encodeURIComponent(filters.search)}&`;
       
-      console.log('URL chiamata API:', `${API_URL}/items${queryParams}`); // Log completo URL
+      // Aggiungi i parametri di paginazione
+      queryParams += `page=${currentPage}&limit=6`;
+      
+      console.log('URL chiamata API:', `${API_URL}/items${queryParams}`);
       
       const response = await axios.get(`${API_URL}/items${queryParams}`);
       
       if (response.data.success) {
-        console.log('Dati ricevuti:', response.data.data); // Per debug
+        console.log('Dati ricevuti:', response.data);
         setItems(response.data.data);
+        setTotalPages(response.data.totalPages);
       } else {
         setError('Errore nel caricamento degli oggetti');
       }
@@ -65,7 +71,7 @@ const HomePage = () => {
 
   useEffect(() => {
     fetchItems();
-  }, [filters]); // Viene eseguito quando i filtri cambiano
+  }, [currentPage, filters]); // Ricarica quando cambia la pagina o i filtri
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -73,10 +79,13 @@ const HomePage = () => {
       ...prev,
       [name]: value
     }));
+    // Quando cambiano i filtri, torniamo alla prima pagina
+    setCurrentPage(1);
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
+    setCurrentPage(1); // Resetta la pagina quando si esegue una nuova ricerca
     fetchItems();
   };
 
@@ -89,6 +98,7 @@ const HomePage = () => {
       dateTo: '',
       location: ''
     });
+    setCurrentPage(1);
   };
 
   return (
@@ -243,6 +253,33 @@ const HomePage = () => {
             </Col>
           )}
         </Row>
+      )}
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="d-flex justify-content-center mt-4">
+          <Pagination>
+            <Pagination.Prev
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            />
+            
+            {[...Array(totalPages)].map((_, idx) => (
+              <Pagination.Item
+                key={idx + 1}
+                active={idx + 1 === currentPage}
+                onClick={() => setCurrentPage(idx + 1)}
+              >
+                {idx + 1}
+              </Pagination.Item>
+            ))}
+            
+            <Pagination.Next
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            />
+          </Pagination>
+        </div>
       )}
     </Container>
   );
