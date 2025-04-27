@@ -9,35 +9,85 @@ import uploadCloudinary from '../middlewares/uploadCloudinary.js';
 
 const router = express.Router();
 
+// Modifica la route GET /items per gestire i filtri di data e posizione
+
 // GET all items with optional filtering
 router.get('/', async (req, res) => {
   try {
     console.log("GET /items route hit");
-    const { type, category, status, search } = req.query;
+    const { type, category, status, search, dateFrom, dateTo, location } = req.query;
     
     // Build filter object
     const filter = {};
     if (type) filter.type = type;
     if (category) filter.category = category;
-    if (status) filter.status = status;
     
-    // Add text search if provided
-    if (search) {
+    // Gestisci lo stato correttamente - solo se specificato esplicitamente
+    if (status) {
+      filter.status = status;
+    } else {
+      // Di default, mostra solo gli oggetti disponibili o in attesa
+      filter.status = { $in: ['available', 'pending'] };
+    }
+    
+    // Aggiungi filtro per date
+    if (dateFrom || dateTo) {
+      filter.date = {};
+      
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        filter.date.$gte = fromDate;
+        console.log("Filtering from date:", fromDate);
+      }
+      
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filter.date.$lte = toDate;
+        console.log("Filtering to date:", toDate);
+      }
+    }
+    
+    // Aggiungi filtro per location
+    if (location) {
+      console.log("Filtering by location:", location);
+      // Crea una regex case-insensitive per cercare nelle parti di location
+      const locationRegex = new RegExp(location, 'i');
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { 'location.city': { $regex: locationRegex } },
+        { 'location.state': { $regex: locationRegex } },
+        { 'location.address': { $regex: locationRegex } }
       ];
     }
     
-    console.log("Filter:", filter);
+    // Add text search if provided
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      
+      // Se abbiamo già un $or per location, dobbiamo combinare con $and
+      if (filter.$or) {
+        const locationOr = filter.$or;
+        filter.$and = [
+          { $or: locationOr },
+          { $or: [
+            { title: { $regex: searchRegex } },
+            { description: { $regex: searchRegex } }
+          ]}
+        ];
+        delete filter.$or;
+      } else {
+        filter.$or = [
+          { title: { $regex: searchRegex } },
+          { description: { $regex: searchRegex } }
+        ];
+      }
+    }
     
-    // Modifica la query per includere sia "available" che "pending"
-    const query = { 
-      ...filter, 
-      status: { $in: ['available', 'pending'] }  // Mostra sia gli oggetti disponibili che quelli in attesa
-    };
+    console.log("Final filter:", JSON.stringify(filter, null, 2));
     
-    const items = await Item.find(query)
+    // Non sovrascrivere più il filtro di stato
+    const items = await Item.find(filter)
       .populate('user', 'firstName lastName email phone')
       .sort({ createdAt: -1 });
       

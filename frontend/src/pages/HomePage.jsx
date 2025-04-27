@@ -12,7 +12,10 @@ const HomePage = () => {
   const [filters, setFilters] = useState({
     type: '',
     category: '',
-    search: ''
+    search: '',
+    dateFrom: '',
+    dateTo: '',
+    location: '' // Per cercare sia nella città che nello stato
   });
 
   const fetchItems = async () => {
@@ -23,14 +26,31 @@ const HomePage = () => {
       if (filters.type) queryParams += `type=${filters.type}&`;
       if (filters.category) queryParams += `category=${filters.category}&`;
       
+      // Aggiungi i nuovi filtri di data e posizione con log
+      if (filters.dateFrom) {
+        console.log("Data inizio:", filters.dateFrom); // Log dettagliato
+        queryParams += `dateFrom=${encodeURIComponent(filters.dateFrom)}&`;
+      }
+      if (filters.dateTo) {
+        console.log("Data fine:", filters.dateTo); // Log dettagliato
+        queryParams += `dateTo=${encodeURIComponent(filters.dateTo)}&`;
+      }
+      if (filters.location) {
+        console.log("Posizione cercata:", filters.location); // Log dettagliato
+        queryParams += `location=${encodeURIComponent(filters.location)}&`;
+      }
+      
       // Aggiungi il filtro per lo stato
       queryParams += 'status=available&';
       
-      if (filters.search) queryParams += `search=${filters.search}`;
+      if (filters.search) queryParams += `search=${encodeURIComponent(filters.search)}`;
+      
+      console.log('URL chiamata API:', `${API_URL}/items${queryParams}`); // Log completo URL
       
       const response = await axios.get(`${API_URL}/items${queryParams}`);
       
       if (response.data.success) {
+        console.log('Dati ricevuti:', response.data.data); // Per debug
         setItems(response.data.data);
       } else {
         setError('Errore nel caricamento degli oggetti');
@@ -45,7 +65,7 @@ const HomePage = () => {
 
   useEffect(() => {
     fetchItems();
-  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filters]); // Viene eseguito quando i filtri cambiano
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -64,7 +84,10 @@ const HomePage = () => {
     setFilters({
       type: '',
       category: '',
-      search: ''
+      search: '',
+      dateFrom: '',
+      dateTo: '',
+      location: ''
     });
   };
 
@@ -83,6 +106,7 @@ const HomePage = () => {
       <Card className="mb-4 shadow-sm">
         <Card.Body>
           <Form onSubmit={handleSearch}>
+            {/* Prima riga di filtri: Tipo, Categoria, Cerca */}
             <Row>
               <Col md={3}>
                 <Form.Group className="mb-3">
@@ -140,6 +164,47 @@ const HomePage = () => {
               </Col>
             </Row>
             
+            {/* Seconda riga di filtri: Data e Posizione */}
+            <Row>
+              <Col md={3}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Data da</Form.Label>
+                  <Form.Control
+                    type="date"
+                    name="dateFrom"
+                    value={filters.dateFrom}
+                    onChange={handleFilterChange}
+                  />
+                </Form.Group>
+              </Col>
+              
+              <Col md={3}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Data fino a</Form.Label>
+                  <Form.Control
+                    type="date"
+                    name="dateTo"
+                    value={filters.dateTo}
+                    onChange={handleFilterChange}
+                    min={filters.dateFrom}
+                  />
+                </Form.Group>
+              </Col>
+              
+              <Col md={4}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Posizione</Form.Label>
+                  <Form.Control
+                    type="text" 
+                    name="location"
+                    value={filters.location}
+                    onChange={handleFilterChange}
+                    placeholder="Cerca per città o stato..."
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+            
             <div className="text-end">
               <Button variant="link" onClick={handleReset}>
                 Reimposta filtri
@@ -149,6 +214,7 @@ const HomePage = () => {
         </Card.Body>
       </Card>
 
+      {/* Resto del componente uguale */}
       {error && (
         <div className="alert alert-danger" role="alert">
           {error}
