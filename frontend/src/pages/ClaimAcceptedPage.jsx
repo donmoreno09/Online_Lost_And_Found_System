@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Container, Alert, Button, Spinner } from 'react-bootstrap';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -10,8 +11,21 @@ const ClaimAcceptedPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [item, setItem] = useState(null);
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Verifica se l'utente è autenticato
+    if (!isAuthenticated) {
+      // Salva il token nel localStorage per recuperarlo dopo il login
+      localStorage.setItem('pendingClaimToken', token);
+      localStorage.setItem('pendingClaimAction', 'accept');
+      
+      // Reindirizza alla pagina di login
+      navigate(`/login?returnUrl=/claim/accept/${token}`);
+      return;
+    }
+    
     const acceptClaim = async () => {
       try {
         setLoading(true);
@@ -31,7 +45,11 @@ const ClaimAcceptedPage = () => {
     };
 
     acceptClaim();
-  }, [token]);
+  }, [token, isAuthenticated, navigate]);
+
+  if (!isAuthenticated) {
+    return null; // Non renderizzare nulla durante il reindirizzamento
+  }
 
   if (loading) {
     return (

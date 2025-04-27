@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,8 +12,9 @@ const LoginPage = () => {
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [returnUrl, setReturnUrl] = useState('/');
 
-    const { login } = useAuth();
+    const { login, isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -27,7 +28,34 @@ const LoginPage = () => {
             localStorage.setItem('token', token);
             window.location.href = '/'; // Reload completo per aggiornare lo stato dell'autenticazione
         }
+
+        // Controlla se c'è un URL di ritorno specificato
+        const returnPath = params.get('returnUrl');
+        if (returnPath) {
+            setReturnUrl(returnPath);
+        }
     }, [location]);
+
+    // Gestisci il reindirizzamento se l'utente è già autenticato
+    useEffect(() => {
+        if (isAuthenticated) {
+            // Controlla se c'è un'azione di reclamo pendente
+            const pendingToken = localStorage.getItem('pendingClaimToken');
+            const pendingAction = localStorage.getItem('pendingClaimAction');
+            
+            if (pendingToken && pendingAction) {
+                // Pulisci i dati pendenti
+                localStorage.removeItem('pendingClaimToken');
+                localStorage.removeItem('pendingClaimAction');
+                
+                // Reindirizza alla pagina corrispondente
+                navigate(`/claim/${pendingAction}/${pendingToken}`);
+            } else {
+                // Altrimenti reindirizza all'URL di ritorno
+                navigate(returnUrl);
+            }
+        }
+    }, [isAuthenticated, navigate, returnUrl]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -51,7 +79,7 @@ const LoginPage = () => {
             const result = await login(formData);
             
             if (result.success) {
-                navigate('/');
+                // Il reindirizzamento viene gestito dall'useEffect sopra
             } else {
                 setError(result.error || 'Login fallito');
             }
@@ -64,6 +92,10 @@ const LoginPage = () => {
     };
 
     const handleGoogleLogin = () => {
+        // Salva l'URL di ritorno per dopo l'autenticazione con Google
+        if (returnUrl !== '/') {
+            localStorage.setItem('postLoginRedirect', returnUrl);
+        }
         window.location.href = `${API_URL}/auths/login-google`;
     };
 
